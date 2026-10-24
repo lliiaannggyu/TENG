@@ -98,9 +98,9 @@ fun QuickMenuScreen(vm: FileManagerViewModel) {
             contentPadding = PaddingValues(top = 6.dp, bottom = 44.dp),
             autoCentering = null,
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(5.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            item(key = "gap") { ClockGap(28.dp) }
+            item(key = "gap") { ClockGap(26.dp) }
             item(key = "title") {
                 SectionHeader(
                     if (selection.active) "已选 ${selection.count} 项" else (browse.location?.name ?: "菜单"),

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -75,27 +76,31 @@ fun HomeScreen(vm: FileManagerViewModel) {
             // 同时它还会把 contentPadding.top 抵消掉（实测 46dp 与 120dp 渲染完全相同）。
             autoCentering = null,
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(5.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             // 给顶部时钟带让位的真实占位项（contentPadding.top 会被锚定逻辑抵消）
-            item(key = "clockGap") { ClockGap(34.dp) }
+            item(key = "clockGap") { ClockGap(30.dp) }
 
             item(key = "storage") {
                 Card(
                     onClick = { vm.openLocation(roots.firstOrNull() ?: return@Card) },
                     enabled = roots.isNotEmpty(),
                     colors = CardDefaults.cardColors(containerColor = scheme.surfaceContainer),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
-                    modifier = Modifier.fillMaxWidth(0.86f),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth(0.86f)
+                        // 存储卡有两行内容（文字行 + 进度条），不能像菜单行那样
+                        // 强制 height()——会把进度条裁掉。用 heightIn 保留下限即可。
+                        .heightIn(min = 52.dp),
                 ) {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(5.dp),
                     ) {
                         Box(modifier = Modifier.fillMaxWidth()) {
                             Text(
                                 text = "存储",
-                                style = MaterialTheme.typography.labelMedium,
+                                style = MaterialTheme.typography.labelSmall,
                                 color = scheme.onSurfaceVariant,
                                 modifier = Modifier.align(Alignment.CenterStart),
                             )
@@ -105,7 +110,7 @@ fun HomeScreen(vm: FileManagerViewModel) {
                                 } else {
                                     "存储不可用"
                                 },
-                                style = MaterialTheme.typography.labelMedium,
+                                style = MaterialTheme.typography.labelSmall,
                                 color = scheme.onSurface,
                                 textAlign = TextAlign.End,
                                 modifier = Modifier.align(Alignment.CenterEnd),

@@ -63,9 +63,9 @@ fun DevicesScreen(vm: FileManagerViewModel) {
             contentPadding = PaddingValues(top = 6.dp, bottom = 44.dp),
             autoCentering = null,
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(5.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            item(key = "gap") { ClockGap(28.dp) }
+            item(key = "gap") { ClockGap(26.dp) }
             item(key = "title") { SectionHeader("附近设备") }
             item(key = "me") {
                 Text(
@@ -180,9 +180,9 @@ fun TransferScreen(vm: FileManagerViewModel) {
                 contentPadding = PaddingValues(top = 6.dp, bottom = 44.dp),
                 autoCentering = null,
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(5.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                item(key = "gap") { ClockGap(28.dp) }
+                item(key = "gap") { ClockGap(26.dp) }
                 item(key = "phase") {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,

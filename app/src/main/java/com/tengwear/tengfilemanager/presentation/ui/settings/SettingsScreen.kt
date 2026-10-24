@@ -77,9 +77,9 @@ fun SettingsScreen(vm: FileManagerViewModel) {
             contentPadding = PaddingValues(top = 6.dp, bottom = 44.dp),
             autoCentering = null,
             horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(5.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            item(key = "gap") { ClockGap(28.dp) }
+            item(key = "gap") { ClockGap(26.dp) }
             item(key = "title") { SectionHeader("设置") }
 
             item(key = "nameLabel") { SectionHeader("设备名（局域网可见）") }

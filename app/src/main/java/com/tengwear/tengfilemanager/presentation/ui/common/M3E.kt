@@ -142,6 +142,11 @@ fun FileCard(
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
         modifier = modifier
             .fillMaxWidth(0.86f)
+            // M3E Card 的官方最小高度是 64dp（CardTokens.ContainerMinHeight），
+            // 那是给"每屏 2~3 项"的卡片设计的。文件列表要 4~5 项，
+            // 所以显式压到 48dp（与 CompactButton 同档）。
+            // height() 会覆盖 defaultMinSize，组件本身的按下形变/无障碍不受影响。
+            .height(48.dp)
             .pointerInput(entry.key, selecting) {
                 if (onRangeSelect == null || !selecting) return@pointerInput
                 detectHorizontalDragGestures(
@@ -432,8 +437,11 @@ private fun MenuCard(
     Card(
         onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = scheme.surfaceContainer),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-        modifier = modifier.fillMaxWidth(0.86f),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+        modifier = modifier
+            .fillMaxWidth(0.86f)
+            // 同 FileCard：Card 默认 64dp 对菜单行也太高，压到 52dp
+            .height(52.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -442,7 +450,7 @@ private fun MenuCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(28.dp)
+                    .size(26.dp)
                     .clip(CircleShape)
                     .background(accent.copy(alpha = 0.18f)),
                 contentAlignment = Alignment.Center,
@@ -452,7 +460,7 @@ private fun MenuCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     color = scheme.onSurface,
                     maxLines = 1,
                     textAlign = TextAlign.Start,

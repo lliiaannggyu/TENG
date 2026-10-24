@@ -90,10 +90,10 @@ fun BrowseScreen(vm: FileManagerViewModel, location: Location) {
                 // 同时它还会把 contentPadding.top 抵消掉。
                 autoCentering = null,
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
                 // 给顶部时钟带让位的真实占位项
-                item(key = "clockGap") { ClockGap(28.dp) }
+                item(key = "clockGap") { ClockGap(26.dp) }
 
                 // ① 面包屑：作为列表首项随滚动缩放，避免固定在圆顶被裁切
                 item(key = "crumbs") {

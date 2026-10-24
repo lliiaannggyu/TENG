@@ -56,9 +56,9 @@ fun TrashScreen(vm: FileManagerViewModel) {
             contentPadding = PaddingValues(top = 6.dp, bottom = 44.dp),
             autoCentering = null,
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(5.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            item(key = "gap") { ClockGap(28.dp) }
+            item(key = "gap") { ClockGap(26.dp) }
             item(key = "header") { SectionHeader("回收站") }
             item(key = "summary") {
                 Text(
@@ -147,9 +147,9 @@ fun CollectionScreen(vm: FileManagerViewModel, type: CollectionType) {
             contentPadding = PaddingValues(top = 6.dp, bottom = 44.dp),
             autoCentering = null,
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(5.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            item(key = "gap") { ClockGap(28.dp) }
+            item(key = "gap") { ClockGap(26.dp) }
             item(key = "title") { SectionHeader(type.title) }
 
             when (type) {
