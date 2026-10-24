@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  根容器：BoxInsetLayout + app:boxedEdges="none"
+
+  为什么不用 boxedEdges="all"：
+    全内缩会把可用区域压成圆的内接正方形（216dp → 152.8dp），
+    对"列表 + 文件名"这种横向信息密度敏感的界面浪费约 30% 可视宽度。
+    这里改为全屏铺满，圆形安全区由 Compose 侧统一负责：
+      · 列表：ScalingLazyColumn 自带"越靠上下越小"的弧形缩放，天然贴合圆边；
+      · 固定元素：RoundMetrics 以 safeRadius = D/2 × 0.88 计算，按极坐标摆放；
+      · 手势热区：底部 24dp 边缘热区用于「上滑打开快捷菜单」，不与列表滚动冲突。
+-->
+<androidx.wear.widget.BoxInsetLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/round_screen_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FF000000"
+    app:boxedEdges="none">
+
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/round_screen_compose"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+</androidx.wear.widget.BoxInsetLayout>

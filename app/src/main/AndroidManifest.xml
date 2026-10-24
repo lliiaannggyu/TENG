@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- ============ 基础 ============ -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!--
+        文件访问策略（重要）：
+        本应用【不申请】 READ_EXTERNAL_STORAGE / WRITE_EXTERNAL_STORAGE / MANAGE_EXTERNAL_STORAGE。
+        默认可操作范围 = 应用沙盒 + 用户通过 SAF(ACTION_OPEN_DOCUMENT_TREE) 显式授权的目录。
+        理由见 docs/架构与交互设计.md「权限与合规」章节。
+    -->
+
+    <!-- ============ 局域网传输 ============ -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
+    <!--
+        安装包：仅用于用户主动点击「安装」时调起系统安装器（PackageInstaller / ACTION_VIEW）。
+        不做静默安装——静默安装需要系统签名或 DeviceOwner，普通应用无法也无意绕过。
+    -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <!--
+        刻意不申请 READ_MEDIA_* / READ_EXTERNAL_STORAGE：
+        分享走 FileProvider 的临时授权，读文件走 SAF 授权，都不需要媒体库权限。
+    -->
+
+    <uses-feature android:name="android.hardware.type.watch" />
+    <!-- 表冠为可选硬件：无表冠设备走「边缘滚动轨 + 翻页键」替代交互 -->
+    <uses-feature android:name="android.hardware.rotary_encoder" android:required="false" />
+
+    <!-- Android 11+ 包可见性：需要查询 APK 的图标/签名，以及调起系统安装器 -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="application/vnd.android.package-archive" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="application/pdf" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".App"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:largeHeap="false"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.DeviceDefault">
+
+        <uses-library
+            android:name="com.google.android.wearable"
+            android:required="true" />
+        <uses-library
+            android:name="wear-sdk"
+            android:required="false" />
+
+        <meta-data
+            android:name="com.google.android.wearable.standalone"
+            android:value="true" />
+
+        <!-- 表盘外的圆形裁切由 BoxInsetLayout + Compose 安全圆共同保证 -->
+        <activity
+            android:name=".presentation.MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/MainActivityTheme.Starting">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- 从通知 / 其他应用「打开方式」进入查看器 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:mimeType="image/*" />
+                <data android:mimeType="video/*" />
+                <data android:mimeType="audio/*" />
+                <data android:mimeType="text/*" />
+                <data android:mimeType="application/pdf" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/x-7z-compressed" />
+                <data android:mimeType="application/vnd.android.package-archive" />
+            </intent-filter>
+        </activity>
+
+        <!-- 文件分享（FileProvider：只暴露 cache/files 下的白名单子目录） -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <!-- 系统安装器回传安装结果（仅回传状态，不做自动重试） -->
+        <receiver
+            android:name=".core.apk.ApkInstallReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.tengwear.tengfilemanager.INSTALL_STATUS" />
+            </intent-filter>
+        </receiver>
+
+        <!-- 大文件传输前台服务：保证息屏后 TCP 会话不被冻结 -->
+        <service
+            android:name=".core.lan.TransferService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+    </application>
+
+</manifest>

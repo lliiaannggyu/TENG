@@ -1,0 +1,48 @@
+<resources>
+    <string name="app_name">TENG文件管理器</string>
+
+    <!-- 首页 -->
+    <string name="home_title">TENG 文件</string>
+    <string name="entry_recent">最近</string>
+    <string name="entry_favorites">收藏</string>
+    <string name="entry_trash">回收站</string>
+    <string name="entry_search">搜索</string>
+    <string name="entry_devices">设备</string>
+    <string name="entry_storage">存储</string>
+
+    <!-- 浏览 -->
+    <string name="browse_empty">此文件夹为空</string>
+    <string name="browse_loading">读取中…</string>
+    <string name="browse_denied">没有访问权限，请重新授权该文件夹</string>
+    <string name="selected_count">已选 %1$d</string>
+
+    <!-- 操作 -->
+    <string name="action_open">打开</string>
+    <string name="action_copy">复制</string>
+    <string name="action_cut">剪切</string>
+    <string name="action_paste">粘贴</string>
+    <string name="action_delete">删除</string>
+    <string name="action_rename">重命名</string>
+    <string name="action_compress">压缩</string>
+    <string name="action_extract">解压</string>
+    <string name="action_share">分享</string>
+    <string name="action_send">发送</string>
+    <string name="action_more">更多</string>
+    <string name="action_undo">撤销</string>
+    <string name="action_cancel">取消</string>
+    <string name="action_confirm">确定</string>
+
+    <!-- 压缩 -->
+    <string name="archive_password_hint">该压缩包已加密，请输入密码</string>
+    <string name="archive_volume_hint">检测到分卷压缩包，请确保所有分卷在同一目录</string>
+
+    <!-- 安装包 -->
+    <string name="apk_install">安装</string>
+    <string name="apk_signature_mismatch">签名与已安装版本不一致，系统会拒绝覆盖安装</string>
+    <string name="apk_need_source_permission">需要允许本应用安装未知来源应用</string>
+
+    <!-- 传输 -->
+    <string name="lan_discovering">正在搜索附近设备…</string>
+    <string name="lan_empty">未发现设备，请确认两台手表在同一 Wi-Fi</string>
+    <string name="lan_privacy">仅在局域网内直连传输，文件不经过服务器</string>
+</resources>

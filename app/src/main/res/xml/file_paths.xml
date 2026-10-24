@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- 分享/发送时先把内容落到这些目录，再交给 FileProvider -->
+    <cache-path name="share_cache" path="share/" />
+    <files-path name="internal_files" path="." />
+    <external-files-path name="external_files" path="." />
+</paths>
