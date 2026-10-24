@@ -13,9 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.runtime.Composable
@@ -130,7 +130,7 @@ fun HomeScreen(vm: FileManagerViewModel) {
 
             item(key = "browse") {
                 MenuCard(
-                    icon = Icons.Filled.List,
+                    icon = Icons.AutoMirrored.Filled.List,
                     title = "浏览文件",
                     subtitle = roots.firstOrNull()?.name ?: "应用内部存储",
                     accent = palette.folder,
@@ -166,7 +166,7 @@ fun HomeScreen(vm: FileManagerViewModel) {
 
             item(key = "devices") {
                 MenuCard(
-                    icon = Icons.Filled.Send,
+                    icon = Icons.AutoMirrored.Filled.Send,
                     title = "设备",
                     subtitle = "局域网互传",
                     accent = palette.video,

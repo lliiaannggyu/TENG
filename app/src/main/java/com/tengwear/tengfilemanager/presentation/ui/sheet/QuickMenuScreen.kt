@@ -28,10 +28,10 @@ import androidx.wear.compose.material3.CompactButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Delete
@@ -207,7 +207,7 @@ fun QuickMenuScreen(vm: FileManagerViewModel) {
                 }
                 item(key = "send") {
                     MenuCard(
-                        icon = Icons.Filled.Send,
+                        icon = Icons.AutoMirrored.Filled.Send,
                         title = "发送到附近设备",
                         subtitle = "局域网直连",
                         accent = palette.video,
@@ -301,13 +301,15 @@ fun QuickMenuScreen(vm: FileManagerViewModel) {
                 KindFilter.ALL, KindFilter.IMAGE, KindFilter.VIDEO, KindFilter.AUDIO,
                 KindFilter.DOCUMENT, KindFilter.ARCHIVE, KindFilter.APK,
             )
-            items(filters.chunked(2).size, key = { "frow_$it" }) { rowIndex ->
-                val pair = filters.chunked(2)[rowIndex]
+            // 一行 3 个：7 个筛选项排成 3/3/1，比一行 2 个少滚一屏。
+            // 圆屏上每个 chip 约 44dp，3 个加间距约 144dp，在 0.86 宽度（195dp）内放得下。
+            items(filters.chunked(3).size, key = { "frow_$it" }) { rowIndex ->
+                val row = filters.chunked(3)[rowIndex]
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    pair.forEach { filter ->
+                    row.forEach { filter ->
                         TextToggleButton(
                             checked = browse.filter == filter,
                             onCheckedChange = { vm.setFilter(filter) },
@@ -335,7 +337,7 @@ fun QuickMenuScreen(vm: FileManagerViewModel) {
             items(roots.size, key = { "root_${roots[it].id}" }) { index ->
                 val location = roots[index]
                 MenuCard(
-                    icon = Icons.Filled.List,
+                    icon = Icons.AutoMirrored.Filled.List,
                     title = location.name,
                     subtitle = null,
                     accent = palette.folder,

@@ -11,6 +11,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.tengwear.tengfilemanager.core.model.FileKind
 import com.tengwear.tengfilemanager.core.model.SortKey
 import com.tengwear.tengfilemanager.core.model.SortSpec
+import com.tengwear.tengfilemanager.core.theme.SeedTheme
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.json.JSONArray
@@ -46,6 +47,8 @@ class UserPreferences(private val context: Context) {
         val showScrollRail: Boolean = true,
         val lanDiscoveryEnabled: Boolean = false,
         val lowPowerAuto: Boolean = true,
+        /** 主题种子色；SYSTEM = 跟随安卓 Material You 官方色阶。 */
+        val seedTheme: SeedTheme = SeedTheme.SYSTEM,
     )
 
     val flow: Flow<Prefs> = context.dataStore.data.map { prefs ->
@@ -59,6 +62,7 @@ class UserPreferences(private val context: Context) {
             showScrollRail = prefs[KEY_SCROLL_RAIL] ?: true,
             lanDiscoveryEnabled = prefs[KEY_LAN_ENABLED] ?: false,
             lowPowerAuto = prefs[KEY_LOW_POWER] ?: true,
+            seedTheme = SeedTheme.fromId(prefs[KEY_SEED_THEME]),
         )
     }
 
@@ -119,6 +123,10 @@ class UserPreferences(private val context: Context) {
 
     suspend fun setLanDiscoveryEnabled(enabled: Boolean) {
         context.dataStore.edit { it[KEY_LAN_ENABLED] = enabled }
+    }
+
+    suspend fun setSeedTheme(theme: SeedTheme) {
+        context.dataStore.edit { it[KEY_SEED_THEME] = theme.id }
     }
 
     // ------------------------------------------------------------ 编解码
@@ -197,5 +205,6 @@ class UserPreferences(private val context: Context) {
         val KEY_SCROLL_RAIL = booleanPreferencesKey("scroll_rail")
         val KEY_LAN_ENABLED = booleanPreferencesKey("lan_enabled")
         val KEY_LOW_POWER = booleanPreferencesKey("low_power")
+        val KEY_SEED_THEME = stringPreferencesKey("seed_theme")
     }
 }

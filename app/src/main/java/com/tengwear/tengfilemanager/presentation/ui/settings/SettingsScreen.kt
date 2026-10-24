@@ -4,10 +4,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
@@ -16,8 +19,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -26,6 +31,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material3.Button
+import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.RadioButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Home
@@ -35,12 +42,15 @@ import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.SwitchButton
 import androidx.wear.compose.material3.Text
+import com.tengwear.tengfilemanager.R
 import com.tengwear.tengfilemanager.presentation.FileManagerViewModel
 import com.tengwear.tengfilemanager.presentation.Screen
 import com.tengwear.tengfilemanager.presentation.theme.LocalTengPalette
 import com.tengwear.tengfilemanager.presentation.ui.common.ClockGap
 import com.tengwear.tengfilemanager.presentation.ui.common.MenuCard
+import com.tengwear.tengfilemanager.core.theme.SeedTheme
 import com.tengwear.tengfilemanager.presentation.ui.common.SectionHeader
+import com.tengwear.tengfilemanager.presentation.ui.common.SeedSwatch
 
 /**
  * 设置页。
@@ -104,6 +114,53 @@ fun SettingsScreen(vm: FileManagerViewModel) {
                     modifier = Modifier.fillMaxWidth(0.5f),
                 ) {
                     Text(text = "保存", maxLines = 1)
+                }
+            }
+
+            // ---------------- 主题色（种子色）----------------
+            item(key = "themeTitle") { SectionHeader("主题色") }
+            item(key = "themeHint") {
+                Text(
+                    text = "Material 3 色阶：每个种子色推导出完整的主/次/中性色阶",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = scheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(0.86f),
+                )
+            }
+            items(SeedTheme.entries.size, key = { "seed_${SeedTheme.entries[it].id}" }) { index ->
+                val theme = SeedTheme.entries[index]
+                RadioButton(
+                    selected = prefs.seedTheme == theme,
+                    onSelect = { vm.setSeedTheme(theme) },
+                    modifier = Modifier.fillMaxWidth(0.86f),
+                    icon = {
+                        // SYSTEM 用系统主色，其余用该种子色推导出的 tone 30/80 双色圆点
+                        if (theme == SeedTheme.SYSTEM) {
+                            Box(
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_content_paste),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.size(12.dp),
+                                )
+                            }
+                        } else {
+                            SeedSwatch(seedArgb = theme.seedArgb)
+                        }
+                    },
+                ) {
+                    Text(
+                        text = theme.label,
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
+                    )
                 }
             }
 

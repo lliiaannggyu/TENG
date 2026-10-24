@@ -22,7 +22,7 @@ import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
@@ -133,7 +133,7 @@ fun DevicesScreen(vm: FileManagerViewModel) {
             items(peers.size, key = { peers[it].id }) { index ->
                 val peer = peers[index]
                 MenuCard(
-                    icon = Icons.Filled.Send,
+                    icon = Icons.AutoMirrored.Filled.Send,
                     title = peer.name,
                     subtitle = "${peer.host.hostAddress}:${peer.port}",
                     accent = palette.video,

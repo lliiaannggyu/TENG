@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+import java.util.Properties
+
 android {
     namespace = "com.tengwear.tengfilemanager"
     compileSdk {
@@ -19,11 +21,34 @@ android {
         versionName = "1.0"
     }
 
+    signingConfigs {
+        // 签名密钥从 local.properties 读，不进版本库。
+        // 换自己的密钥时只需在 local.properties 里改这四个值。
+        create("release") {
+            val props = Properties().apply {
+                val f = rootProject.file("local.properties")
+                if (f.exists()) f.inputStream().use { load(it) }
+            }
+            storeFile = file(props.getProperty("release.storeFile", "release-key.jks")) // 相对于 app/ 目录
+            storePassword = props.getProperty("release.storePassword", "")
+            keyAlias = props.getProperty("release.keyAlias", "")
+            keyPassword = props.getProperty("release.keyPassword", "")
+            enableV1Signing = false
+            enableV2Signing = true
+        }
+    }
+
     buildTypes {
         release {
+            // R8 混淆 + 裁剪。debug 41MB（dex 38MB）的绝大部分来自
+            // Compose / Media3 / Coil 的未使用代码，开 R8 后预期降到 10~14MB。
             optimization {
-                enable = false
+                enable = true
+                keepRules {
+                    files("proguard-rules.pro")
+                }
             }
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {

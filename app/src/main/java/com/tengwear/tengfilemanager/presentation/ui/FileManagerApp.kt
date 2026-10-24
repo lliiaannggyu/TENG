@@ -1,15 +1,27 @@
 package com.tengwear.tengfilemanager.presentation.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.Crossfade
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.wear.compose.foundation.CurvedTextStyle
+import androidx.wear.compose.foundation.basicCurvedText
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.TimeText
@@ -37,12 +49,12 @@ import com.tengwear.tengfilemanager.presentation.ui.viewer.ViewerScreen
 /**
  * 应用外壳。
  *
- * 骨架是官方 [AppScaffold]：它负责全屏背景、时钟的唯一来源（[TimeText]）
- * 以及页面切换时的缩放转场。时钟只在这一处声明一次，所有页面共享——
- * 之前每页各写一遍时钟的写法既重复又容易和列表内容重叠。
+ * 骨架是官方 [AppScaffold]：它负责全屏背景、页面切换的缩放转场。
+ * 时钟在 [AppClock] 里声明一次，所有页面共享。
  *
  * 三层结构：
- *  1. 底层：当前页面（Crossfade 切换，200ms，避免圆屏上的滑动转场造成眩晕）；
+ *  1. 底层：当前页面（[AnimatedContent] 带方向感的滑入滑出 + 缩放 + 淡入淡出，
+ *     比 Crossfade 更能表达"进了一层 / 退了一层"）；
  *  2. 中层：模态覆盖（确认 / 进度 / 消息 / 撤销条），它们不进入页面栈，
  *     因此"返回"不会误把进度条当成一页；
  *  3. 顶层：全局返回拦截——先退出选择态，再关弹层，最后逐级出栈。
@@ -61,13 +73,31 @@ fun FileManagerApp(vm: FileManagerViewModel, onExit: () -> Unit) {
         if (!vm.back()) onExit()
     }
 
-    AppScaffold {
+    AppScaffold(timeText = { AppClock() }) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background),
         ) {
-            Crossfade(targetState = current, label = "screen") { screen ->
+            AnimatedContent(
+                targetState = current,
+                transitionSpec = {
+                    // 进页向右滑入、退页向左滑入，配合官方 AppScaffold 的缩放转场
+                    val forward = targetState.depthOf() >= initialState.depthOf()
+                    val dir = if (forward) 1 else -1
+                    (
+                        slideInHorizontally(tween(260)) { w -> dir * w / 3 } +
+                            fadeIn(tween(220)) +
+                            scaleIn(tween(260), initialScale = 0.92f)
+                        ) togetherWith
+                        (
+                            slideOutHorizontally(tween(260)) { w -> -dir * w / 3 } +
+                                fadeOut(tween(200)) +
+                                scaleOut(tween(260), targetScale = 0.92f)
+                            )
+                },
+                label = "screen",
+            ) { screen ->
                 when (screen) {
                     is Screen.Home -> HomeScreen(vm)
                     is Screen.Browse -> BrowseScreen(vm, screen.location)
@@ -101,4 +131,47 @@ fun FileManagerApp(vm: FileManagerViewModel, onExit: () -> Unit) {
             }
         }
     }
+}
+
+/** 屏幕在返回栈里的深度，用于判断转场方向。 */
+private fun Screen.depthOf(): Int = when (this) {
+    is Screen.Home -> 0
+    is Screen.Browse -> 1
+    else -> 2
+}
+
+/**
+ * 全局时钟。
+ *
+ * 用官方 [TimeText] 组件，但把字号压到 13sp、弧长收到 84°：
+ * 默认 14sp 的弧形文字带在半径方向有约 10dp 厚度，加上 70° 弧在两端下垂 20dp，
+ * 底部会伸到屏幕顶部下方约 30dp——列表第一项会被压住（实测首屏标题和时钟糊在一起）。
+ * 压字号 + 收弧长后带宽降到约 18dp，列表留 26dp 就够，省下的纵向空间给文件行。
+ *
+ * 两个必须注意的点：
+ *  · `content` 是 `CurvedScope.(String) -> Unit`，**不是 @Composable**，
+ *    主题色必须在外面取好再捕获进 lambda；
+ *  · `backgroundColor` 必须传实色，列表会从时钟下面滚过，透明背景会让
+ *    文件行直接穿到时钟文字上。
+ */
+@Composable
+private fun AppClock(modifier: Modifier = Modifier) {
+    val clockColor = MaterialTheme.colorScheme.onBackground
+    // backgroundColor 必须是实色：列表会从时钟下面滚过，
+    // 透明背景会让文件行直接穿到时钟文字上（实测很糊）。
+    val clockBand = MaterialTheme.colorScheme.background
+    TimeText(
+        modifier = modifier,
+        maxSweepAngle = 84f,
+        backgroundColor = clockBand,
+        content = { time ->
+            basicCurvedText(
+                text = time,
+                style = CurvedTextStyle(
+                    fontSize = 13.sp,
+                    color = clockColor,
+                ),
+            )
+        },
+    )
 }

@@ -896,6 +896,10 @@ class FileManagerViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { prefs.setLanDiscoveryEnabled(enabled) }
     }
 
+    fun setSeedTheme(theme: com.tengwear.tengfilemanager.core.theme.SeedTheme) {
+        viewModelScope.launch { prefs.setSeedTheme(theme) }
+    }
+
     /** 撤销某个 SAF 授权（只解除本应用的访问权，不动用户文件）。 */
     fun removeLocation(location: Location) {
         fs.releaseLocation(location)

@@ -6,11 +6,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import com.tengwear.tengfilemanager.R
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tengwear.tengfilemanager.core.theme.SeedTheme
 import com.tengwear.tengfilemanager.presentation.theme.TENG文件管理器Theme
 import com.tengwear.tengfilemanager.presentation.ui.FileManagerApp
 
@@ -40,7 +43,9 @@ class MainActivity : ComponentActivity() {
         findViewById<ComposeView>(R.id.round_screen_compose).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                TENG文件管理器Theme {
+                // 主题种子色跟着偏好走；默认 SYSTEM = 安卓 Material You 官方色阶
+                val prefs by viewModel.prefsState.collectAsStateWithLifecycle()
+                TENG文件管理器Theme(seed = prefs.seedTheme) {
                     FileManagerApp(vm = viewModel, onExit = { finish() })
                 }
             }

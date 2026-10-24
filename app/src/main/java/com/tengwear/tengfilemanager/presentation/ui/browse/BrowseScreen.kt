@@ -1,5 +1,12 @@
 package com.tengwear.tengfilemanager.presentation.ui.browse
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -144,18 +151,26 @@ fun BrowseScreen(vm: FileManagerViewModel, location: Location) {
             }
         }
 
-        // ④ 选择态操作条
-        if (selection.active) {
-            SelectionScrim(modifier = Modifier.align(Alignment.BottomCenter))
-            SelectionActionBar(
-                onCopy = { vm.copySelection(cut = false) },
-                onDelete = { vm.requestDelete(vm.selectedEntries()) },
-                onMore = { vm.navigate(Screen.QuickMenu) },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    // 圆屏底部弦宽很窄，工具条必须离底边 26dp，否则两端会被表壳切掉
-                    .padding(bottom = 26.dp),
-            )
+        // ④ 选择态操作条：滑入动画 + 取消按钮
+        AnimatedVisibility(
+            visible = selection.active,
+            enter = slideInVertically(tween(220)) { it } + fadeIn(tween(180)),
+            exit = slideOutVertically(tween(180)) { it } + fadeOut(tween(140)),
+            modifier = Modifier.align(Alignment.BottomCenter),
+        ) {
+            Box(modifier = Modifier.align(Alignment.BottomCenter)) {
+                SelectionScrim(modifier = Modifier.align(Alignment.BottomCenter))
+                SelectionActionBar(
+                    onCopy = { vm.copySelection(cut = false) },
+                    onDelete = { vm.requestDelete(vm.selectedEntries()) },
+                    onMore = { vm.navigate(Screen.QuickMenu) },
+                    onCancel = { vm.clearSelection() },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        // 圆屏底部弦宽很窄，工具条必须离底边 26dp，否则两端会被表壳切掉
+                        .padding(bottom = 26.dp),
+                )
+            }
         }
 
         // ⑤ 底部边缘上滑热区：打开快捷菜单
@@ -242,6 +257,13 @@ private fun Breadcrumbs(
 private fun SwipeUpHandle(onOpen: () -> Unit, modifier: Modifier = Modifier) {
     val palette = LocalTengPalette.current
     var dragged by remember { mutableFloatStateOf(0f) }
+    // 横条透明度随拖拽进度变化：给"这里可以上滑"一个即时反馈，
+    // 而不是只有拖过阈值才突然弹菜单
+    val pull by animateFloatAsState(
+        targetValue = ((-dragged).coerceIn(0f, 40f)) / 40f,
+        animationSpec = tween(120),
+        label = "handlePull",
+    )
     Box(
         modifier = modifier.pointerInput(Unit) {
             detectVerticalDragGestures(
@@ -260,11 +282,12 @@ private fun SwipeUpHandle(onOpen: () -> Unit, modifier: Modifier = Modifier) {
     ) {
         Box(
             modifier = Modifier
-                .padding(bottom = 4.dp)
-                .width(28.dp)
-                .height(3.dp)
+                .padding(bottom = 5.dp)
+                // 粗一点：3dp 在 227dp 圆屏上几乎看不见，5dp 才像一个可操作的把手
+                .width(34.dp)
+                .height(5.dp)
                 .clip(RoundedCornerShape(50))
-                .background(palette.muted.copy(alpha = 0.45f)),
+                .background(palette.muted.copy(alpha = 0.45f + 0.5f * pull)),
         )
     }
 }
