@@ -21,7 +21,7 @@
 | 能力 | 库 | 为什么不用别的 |
 |---|---|---|
 | 列表 | `androidx.wear.compose.foundation.lazy.ScalingLazyColumn` | 自带"越靠上下越小"的弧形缩放 + 表冠旋转，自己写会丢掉这两点 |
-| 组件 | `androidx.wear.compose.material3` | 圆屏尺寸/触控目标/字体缩放都已按 Wear 规范调过 |
+| **UI 组件（M3E）** | `androidx.wear.compose.material3` | 官方 Material 3 Expressive for Wear：`AppScaffold` / `ScreenScaffold` / `TimeText`（时钟）/ `Card` / `AlertDialog` / `Dialog` / `SwitchButton` / `RadioButton` / `TextToggleButton` / `CircularProgressIndicator` / `LinearProgressIndicator` / `ScrollIndicator` / `ListHeader`，映射表见文档 §12 |
 | 缩略图 | Coil（`coil-compose` + `coil-video`） | 视频首帧解码不用自己接 MediaMetadataRetriever |
 | 音视频 | Media3 `ExoPlayer` + `media3-ui` | — |
 | PDF | 系统 `PdfRenderer` | 零依赖，手表上不需要复杂排版 |

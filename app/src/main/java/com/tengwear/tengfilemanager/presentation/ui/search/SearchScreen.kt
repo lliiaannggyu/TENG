@@ -22,17 +22,18 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import com.tengwear.tengfilemanager.core.util.formatBytes
 import com.tengwear.tengfilemanager.presentation.FileManagerViewModel
-import com.tengwear.tengfilemanager.presentation.theme.LocalTengPalette
-import com.tengwear.tengfilemanager.presentation.ui.round.EmptyState
-import com.tengwear.tengfilemanager.presentation.ui.round.RoundListRow
+import com.tengwear.tengfilemanager.presentation.ui.common.ClockGap
+import com.tengwear.tengfilemanager.presentation.ui.common.EmptyState
+import com.tengwear.tengfilemanager.presentation.ui.common.FileCard
+import com.tengwear.tengfilemanager.presentation.ui.common.SectionHeader
 
 /**
  * 搜索页。
@@ -42,10 +43,12 @@ import com.tengwear.tengfilemanager.presentation.ui.round.RoundListRow
  * 让它"边打边出结果"比"打完再确认"更省时间。
  *
  * 搜索范围 = 沙盒 + 已授权目录，深度上限 6 层，结果上限 200 条（见 FileRepository.search）。
+ * 输入框是 foundation 的 `BasicTextField`（M3E 手表端没有 TextField 原语），
+ * 结果行复用浏览页的 M3E `Card`。
  */
 @Composable
 fun SearchScreen(vm: FileManagerViewModel) {
-    val palette = LocalTengPalette.current
+    val scheme = MaterialTheme.colorScheme
     val search by vm.search.collectAsStateWithLifecycle()
     val state = rememberScalingLazyListState()
     var query by remember { mutableStateOf(search.query) }
@@ -53,57 +56,62 @@ fun SearchScreen(vm: FileManagerViewModel) {
 
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
 
-    ScalingLazyColumn(
-        state = state,
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(vertical = 26.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        item(key = "field") {
-            BasicTextField(
-                value = query,
-                onValueChange = {
-                    query = it
-                    vm.setQuery(it)
-                },
-                singleLine = true,
-                textStyle = TextStyle(fontSize = 12.sp, color = MaterialTheme.colorScheme.onBackground),
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                modifier = Modifier
-                    .fillMaxWidth(0.82f)
-                    .focusRequester(focus)
-                    .clip(RoundedCornerShape(50))
-                    .background(palette.card)
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-            )
-        }
+    ScreenScaffold(scrollState = state, edgeButton = {}) { _ ->
+        ScalingLazyColumn(
+            state = state,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(top = 6.dp, bottom = 44.dp),
+            autoCentering = null,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(5.dp),
+        ) {
+            item(key = "gap") { ClockGap(28.dp) }
+            item(key = "title") { SectionHeader("搜索") }
 
-        item(key = "status") {
-            Text(
-                text = when {
-                    search.running -> "搜索中… 已扫描 ${search.scanned} 个目录"
-                    search.query.length < 2 -> "输入至少 2 个字符"
-                    else -> "${search.results.size} 个结果"
-                },
-                fontSize = 9.sp,
-                color = palette.muted,
-                maxLines = 1,
-            )
-        }
+            item(key = "field") {
+                BasicTextField(
+                    value = query,
+                    onValueChange = {
+                        query = it
+                        vm.setQuery(it)
+                    },
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = scheme.onSurface),
+                    cursorBrush = SolidColor(scheme.primary),
+                    modifier = Modifier
+                        .fillMaxWidth(0.86f)
+                        .focusRequester(focus)
+                        .clip(RoundedCornerShape(50))
+                        .background(scheme.surfaceContainer)
+                        .padding(horizontal = 14.dp, vertical = 9.dp),
+                )
+            }
 
-        if (search.results.isEmpty() && !search.running && search.query.length >= 2) {
-            item(key = "empty") { EmptyState("没有匹配项", "只搜索已授权的目录") }
-        }
+            item(key = "status") {
+                Text(
+                    text = when {
+                        search.running -> "搜索中… 已扫描 ${search.scanned} 个目录"
+                        search.query.length < 2 -> "输入至少 2 个字符"
+                        else -> "${search.results.size} 个结果"
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = scheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
 
-        items(search.results.size, key = { search.results[it].key }) { index ->
-            val entry = search.results[index]
-            RoundListRow(
-                glyph = entry.kind.badge,
-                title = entry.name,
-                color = palette.of(entry.kind),
-                subtitle = if (entry.isDirectory) "文件夹" else formatBytes(entry.size),
-            ) { vm.openEntryAnywhere(entry) }
+            if (search.results.isEmpty() && !search.running && search.query.length >= 2) {
+                item(key = "empty") { EmptyState("没有匹配项", "只搜索已授权的目录") }
+            }
+
+            items(search.results.size, key = { search.results[it].key }) { index ->
+                val entry = search.results[index]
+                FileCard(
+                    entry = entry,
+                    onClick = { vm.openEntryAnywhere(entry) },
+                    secondary = if (entry.isDirectory) "文件夹" else formatBytes(entry.size),
+                )
+            }
         }
     }
 }

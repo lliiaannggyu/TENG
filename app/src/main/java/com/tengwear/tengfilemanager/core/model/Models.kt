@@ -9,6 +9,7 @@ import android.net.Uri
 enum class FileKind {
     FOLDER, IMAGE, VIDEO, AUDIO, DOCUMENT, ARCHIVE, APK, OTHER;
 
+    /** 供无障碍朗读与列表副标题使用。 */
     val label: String
         get() = when (this) {
             FOLDER -> "文件夹"
@@ -19,19 +20,6 @@ enum class FileKind {
             ARCHIVE -> "压缩包"
             APK -> "安装包"
             OTHER -> "其他"
-        }
-
-    /** 类型徽标上的单字，圆屏 12sp 下仍可辨认，比图标更省像素也更省内存。 */
-    val badge: String
-        get() = when (this) {
-            FOLDER -> "夹"
-            IMAGE -> "图"
-            VIDEO -> "视"
-            AUDIO -> "音"
-            DOCUMENT -> "文"
-            ARCHIVE -> "包"
-            APK -> "装"
-            OTHER -> "件"
         }
 
     companion object {

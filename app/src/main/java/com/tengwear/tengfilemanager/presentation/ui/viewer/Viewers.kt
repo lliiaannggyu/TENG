@@ -53,8 +53,10 @@ import com.tengwear.tengfilemanager.core.util.formatBytes
 import com.tengwear.tengfilemanager.core.util.formatDuration
 import com.tengwear.tengfilemanager.presentation.FileManagerViewModel
 import com.tengwear.tengfilemanager.presentation.theme.LocalTengPalette
-import com.tengwear.tengfilemanager.presentation.ui.round.EmptyState
-import com.tengwear.tengfilemanager.presentation.ui.round.RoundTextAction
+import com.tengwear.tengfilemanager.presentation.ui.common.EmptyState
+import androidx.wear.compose.material3.CompactButton
+import androidx.wear.compose.material3.FilledTonalButton
+import androidx.wear.compose.material3.TextButton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -194,16 +196,28 @@ private fun MediaViewer(entry: FileEntry, isVideo: Boolean) {
             )
             Row(
                 modifier = Modifier.padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                RoundTextAction(text = "−10s", onClick = { player.seekTo((player.currentPosition - 10_000).coerceAtLeast(0)) }, container = palette.card)
-                RoundTextAction(
-                    text = if (player.isPlaying) "暂停" else "播放",
+                CompactButton(
+                    onClick = { player.seekTo((player.currentPosition - 10_000).coerceAtLeast(0)) },
+                ) {
+                    Text(text = "−10s", style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                }
+                FilledTonalButton(
                     onClick = { if (player.isPlaying) player.pause() else player.play() },
-                    container = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-                RoundTextAction(text = "+10s", onClick = { player.seekTo(player.currentPosition + 10_000) }, container = palette.card)
+                ) {
+                    Text(
+                        text = if (player.isPlaying) "暂停" else "播放",
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                    )
+                }
+                CompactButton(
+                    onClick = { player.seekTo(player.currentPosition + 10_000) },
+                ) {
+                    Text(text = "+10s", style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                }
             }
         }
     }

@@ -39,8 +39,11 @@ import com.tengwear.tengfilemanager.core.model.FileEntry
 import com.tengwear.tengfilemanager.core.util.formatBytes
 import com.tengwear.tengfilemanager.presentation.FileManagerViewModel
 import com.tengwear.tengfilemanager.presentation.theme.LocalTengPalette
-import com.tengwear.tengfilemanager.presentation.ui.round.EmptyState
-import com.tengwear.tengfilemanager.presentation.ui.round.RoundTextAction
+import com.tengwear.tengfilemanager.presentation.ui.common.EmptyState
+import com.tengwear.tengfilemanager.presentation.ui.common.InfoRow
+import androidx.wear.compose.material3.Button
+import androidx.wear.compose.material3.ScreenScaffold
+import androidx.wear.compose.material3.TextButton
 
 /**
  * 压缩包浏览。
@@ -58,18 +61,21 @@ fun ArchiveScreen(vm: FileManagerViewModel, entry: FileEntry) {
 
     LaunchedEffect(entry.key) { vm.inspectArchive(entry) }
 
-    ScalingLazyColumn(
-        state = state,
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(vertical = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(3.dp),
-    ) {
+    ScreenScaffold(scrollState = state, edgeButton = {}) { _ ->
+        ScalingLazyColumn(
+            state = state,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(top = 6.dp, bottom = 44.dp),
+            autoCentering = null,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(5.dp),
+        ) {
+        item(key = "gap") { com.tengwear.tengfilemanager.presentation.ui.common.ClockGap(28.dp) }
         item(key = "head") {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = entry.name,
-                    fontSize = 10.sp,
+                    style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onBackground,
                     maxLines = 2,
                     textAlign = TextAlign.Center,
@@ -107,15 +113,15 @@ fun ArchiveScreen(vm: FileManagerViewModel, entry: FileEntry) {
                     )
                 }
                 item(key = "pwdOk") {
-                    RoundTextAction(
-                        text = "解锁",
+                    Button(
                         onClick = {
                             passwordRequested = true
                             vm.inspectArchive(entry, password)
                         },
-                        container = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
+                        modifier = Modifier.fillMaxWidth(0.5f),
+                    ) {
+                        Text(text = "解锁", maxLines = 1)
+                    }
                 }
                 if (passwordRequested) {
                     item(key = "pwdFail") {
@@ -129,7 +135,9 @@ fun ArchiveScreen(vm: FileManagerViewModel, entry: FileEntry) {
                     EmptyState("无法预览", result.reason)
                 }
                 item(key = "extractAnyway") {
-                    RoundTextAction(text = "尝试解压", onClick = { vm.requestExtract(entry) }, container = palette.card)
+                    TextButton(onClick = { vm.requestExtract(entry) }) {
+                        Text(text = "尝试解压", maxLines = 1)
+                    }
                 }
             }
 
@@ -147,12 +155,12 @@ fun ArchiveScreen(vm: FileManagerViewModel, entry: FileEntry) {
                     )
                 }
                 item(key = "extract") {
-                    RoundTextAction(
-                        text = "解压到当前位置",
+                    Button(
                         onClick = { vm.requestExtract(entry) },
-                        container = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
+                        modifier = Modifier.fillMaxWidth(0.7f),
+                    ) {
+                        Text(text = "解压到当前位置", maxLines = 1)
+                    }
                 }
                 items(archive.entries.size, key = { "e_${archive.entries[it].path}" }) { index ->
                     val item = archive.entries[index]
@@ -189,6 +197,7 @@ fun ArchiveScreen(vm: FileManagerViewModel, entry: FileEntry) {
                 }
             }
         }
+        }
     }
 }
 
@@ -208,18 +217,21 @@ fun ApkScreen(vm: FileManagerViewModel, entry: FileEntry) {
 
     LaunchedEffect(entry.key) { vm.inspectApk(entry) }
 
-    ScalingLazyColumn(
-        state = state,
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(vertical = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(3.dp),
-    ) {
+    ScreenScaffold(scrollState = state, edgeButton = {}) { _ ->
+        ScalingLazyColumn(
+            state = state,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(top = 6.dp, bottom = 44.dp),
+            autoCentering = null,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(5.dp),
+        ) {
+        item(key = "gap") { com.tengwear.tengfilemanager.presentation.ui.common.ClockGap(28.dp) }
         item(key = "head") {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = info?.label ?: entry.name,
-                    fontSize = 11.sp,
+                    style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onBackground,
                     fontWeight = FontWeight.Medium,
                     maxLines = 2,
@@ -238,27 +250,27 @@ fun ApkScreen(vm: FileManagerViewModel, entry: FileEntry) {
         val apk = info
         if (apk != null) {
             item(key = "version") {
-                infoRow("版本", "${apk.versionName ?: "—"}（${apk.versionCode}）")
+                InfoRow("版本", "${apk.versionName ?: "—"}（${apk.versionCode}）")
             }
-            item(key = "size") { infoRow("大小", formatBytes(apk.sizeBytes)) }
+            item(key = "size") { InfoRow("大小", formatBytes(apk.sizeBytes)) }
             item(key = "sdk") {
-                infoRow("系统要求", "Android API ${apk.minSdk}+（当前 ${android.os.Build.VERSION.SDK_INT}）")
+                InfoRow("系统要求", "Android API ${apk.minSdk}+（当前 ${android.os.Build.VERSION.SDK_INT}）")
             }
             item(key = "sign") {
-                infoRow(
+                InfoRow(
                     "签名",
                     apk.signatureShort,
                     if (apk.signatureMatchesInstalled) palette.success else palette.danger,
                 )
             }
             apk.installedVersionName?.let { installed ->
-                item(key = "installed") { infoRow("已安装", installed) }
+                item(key = "installed") { InfoRow("已安装", installed) }
             }
             if (apk.splitNames.isNotEmpty()) {
-                item(key = "splits") { infoRow("分包", "${apk.splitNames.size} 个 split") }
+                item(key = "splits") { InfoRow("分包", "${apk.splitNames.size} 个 split") }
             }
             if (apk.permissions.isNotEmpty()) {
-                item(key = "perms") { infoRow("权限", apk.permissions.take(3).joinToString("、")) }
+                item(key = "perms") { InfoRow("权限", apk.permissions.take(3).joinToString("、")) }
             }
 
             apk.warnings.forEachIndexed { index, warning ->
@@ -288,12 +300,16 @@ fun ApkScreen(vm: FileManagerViewModel, entry: FileEntry) {
             }
 
             item(key = "install") {
-                RoundTextAction(
-                    text = if (apk.canInstall) "安装" else "处理问题后安装",
+                Button(
                     onClick = { vm.requestInstall() },
-                    container = if (apk.canInstall) MaterialTheme.colorScheme.primaryContainer else palette.card,
-                    contentColor = if (apk.canInstall) MaterialTheme.colorScheme.onPrimaryContainer else palette.muted,
-                )
+                    enabled = apk.canInstall,
+                    modifier = Modifier.fillMaxWidth(0.5f),
+                ) {
+                    Text(
+                        text = if (apk.canInstall) "安装" else "处理问题后安装",
+                        maxLines = 1,
+                    )
+                }
             }
             item(key = "note") {
                 Text(
@@ -306,29 +322,6 @@ fun ApkScreen(vm: FileManagerViewModel, entry: FileEntry) {
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun infoRow(label: String, value: String, valueColor: Color = Color.Unspecified) {
-    val palette = LocalTengPalette.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth(0.9f)
-            .clip(RoundedCornerShape(6.dp))
-            .background(palette.card)
-            .padding(horizontal = 8.dp, vertical = 3.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(text = label, fontSize = 8.sp, color = palette.muted, maxLines = 1)
-        Text(
-            text = value,
-            modifier = Modifier.weight(1f).padding(start = 6.dp),
-            fontSize = 8.5.sp,
-            color = if (valueColor == Color.Unspecified) MaterialTheme.colorScheme.onBackground else valueColor,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.End,
-        )
+        }
     }
 }

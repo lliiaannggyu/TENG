@@ -20,12 +20,32 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
+import androidx.wear.compose.material3.Button
+import androidx.wear.compose.material3.CompactButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Create
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Add
 import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.RadioButton
+import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.TextButton
+import androidx.wear.compose.material3.TextToggleButton
+import com.tengwear.tengfilemanager.R
 import com.tengwear.tengfilemanager.core.model.ClipMode
 import com.tengwear.tengfilemanager.core.model.KindFilter
 import com.tengwear.tengfilemanager.core.model.SortKey
@@ -33,8 +53,9 @@ import com.tengwear.tengfilemanager.core.util.formatBytes
 import com.tengwear.tengfilemanager.presentation.FileManagerViewModel
 import com.tengwear.tengfilemanager.presentation.Screen
 import com.tengwear.tengfilemanager.presentation.theme.LocalTengPalette
-import com.tengwear.tengfilemanager.presentation.ui.round.RoundListRow
-import com.tengwear.tengfilemanager.presentation.ui.round.RoundTextAction
+import com.tengwear.tengfilemanager.presentation.ui.common.ClockGap
+import com.tengwear.tengfilemanager.presentation.ui.common.MenuCard
+import com.tengwear.tengfilemanager.presentation.ui.common.SectionHeader
 
 private enum class CreateMode { FOLDER, FILE }
 
@@ -46,12 +67,14 @@ private enum class CreateMode { FOLDER, FILE }
  *  · 处于选择态时，整页换成批量操作（复制/剪切/删除/压缩/分享/发送）；
  *  · 排序/筛选/路径/位置都在这里，不需要用户回首页绕一圈。
  *
- * 为什么用整页而不是 BottomSheet：圆屏上弹层高度一旦超过 60%，顶部的弧形留白会被切掉；
- * 整页 + ScalingLazyColumn 的缩放能保证所有内容都落在安全圆内。
+ * 全部用官方 M3E 组件：动作是 [MenuCard]（Card），排序是 [RadioButton]，
+ * 筛选是 [TextToggleButton]（官方 chip），新建/打开是 [Button]。
+ * 不做 BottomSheet：圆屏上弹层高度一旦超过 60%，顶部的弧形留白会被切掉。
  */
 @Composable
 fun QuickMenuScreen(vm: FileManagerViewModel) {
     val palette = LocalTengPalette.current
+    val scheme = MaterialTheme.colorScheme
     val browse by vm.browse.collectAsStateWithLifecycle()
     val clipboard by vm.clipboard.collectAsStateWithLifecycle()
     val roots by vm.roots.collectAsStateWithLifecycle()
@@ -68,208 +91,273 @@ fun QuickMenuScreen(vm: FileManagerViewModel) {
         vm.back()
     }
 
-    ScalingLazyColumn(
-        state = state,
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(vertical = 26.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        item(key = "title") {
-            Text(
-                text = if (selection.active) "已选 ${selection.count} 项" else (browse.location?.name ?: "菜单"),
-                fontSize = 11.sp,
-                color = palette.muted,
-                maxLines = 1,
-            )
-        }
-
-        // ---------------- 新建输入态 ----------------
-        if (createMode != null) {
-            item(key = "input") {
-                BasicTextField(
-                    value = input,
-                    onValueChange = { input = it },
-                    singleLine = true,
-                    textStyle = TextStyle(fontSize = 12.sp, color = MaterialTheme.colorScheme.onBackground),
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                    modifier = Modifier
-                        .fillMaxWidth(0.8f)
-                        .clip(RoundedCornerShape(50))
-                        .background(palette.card)
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+    ScreenScaffold(scrollState = state, edgeButton = {}) { _ ->
+        ScalingLazyColumn(
+            state = state,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(top = 6.dp, bottom = 44.dp),
+            autoCentering = null,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(5.dp),
+        ) {
+            item(key = "gap") { ClockGap(28.dp) }
+            item(key = "title") {
+                SectionHeader(
+                    if (selection.active) "已选 ${selection.count} 项" else (browse.location?.name ?: "菜单"),
                 )
             }
-            item(key = "create") {
-                RoundTextAction(
-                    text = if (createMode == CreateMode.FOLDER) "创建文件夹" else "创建文件",
-                    onClick = {
-                        val name = input.ifBlank { if (createMode == CreateMode.FOLDER) "新建文件夹" else "新建文件.txt" }
-                        if (createMode == CreateMode.FOLDER) vm.createFolder(name) else vm.createFile(name)
-                        vm.back()
-                    },
-                    container = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-            }
-            item(key = "cancel") {
-                RoundTextAction(text = "取消", onClick = { createMode = null; input = "" }, container = palette.card)
-            }
-            return@ScalingLazyColumn
-        }
 
-        // ---------------- 选择态：批量操作 ----------------
-        if (selection.active) {
-            item(key = "copy") {
-                RoundListRow("复", "复制", palette.document, subtitle = "${selected.size} 项") {
-                    closeWith { vm.copySelection(cut = false) }
+            // ---------------- 新建输入态 ----------------
+            if (createMode != null) {
+                item(key = "input") {
+                    BasicTextField(
+                        value = input,
+                        onValueChange = { input = it },
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(color = scheme.onSurface),
+                        cursorBrush = SolidColor(scheme.primary),
+                        modifier = Modifier
+                            .fillMaxWidth(0.86f)
+                            .clip(RoundedCornerShape(50))
+                            .background(scheme.surfaceContainer)
+                            .padding(horizontal = 14.dp, vertical = 9.dp),
+                    )
+                }
+                item(key = "create") {
+                    Button(
+                        onClick = {
+                            val name = input.ifBlank {
+                                if (createMode == CreateMode.FOLDER) "新建文件夹" else "新建文件.txt"
+                            }
+                            if (createMode == CreateMode.FOLDER) vm.createFolder(name) else vm.createFile(name)
+                            vm.back()
+                        },
+                        modifier = Modifier.fillMaxWidth(0.6f),
+                    ) {
+                        Text(
+                            text = if (createMode == CreateMode.FOLDER) "创建文件夹" else "创建文件",
+                            maxLines = 1,
+                        )
+                    }
+                }
+                item(key = "cancel") {
+                    TextButton(
+                        onClick = {
+                            createMode = null
+                            input = ""
+                        },
+                    ) {
+                        Text(text = "取消", maxLines = 1)
+                    }
+                }
+                return@ScalingLazyColumn
+            }
+
+            // ---------------- 选择态：批量操作 ----------------
+            if (selection.active) {
+                item(key = "copy") {
+                    MenuCard(
+                        icon = R.drawable.ic_content_copy,
+                        title = "复制",
+                        subtitle = "${selected.size} 项",
+                        accent = palette.document,
+                    ) { closeWith { vm.copySelection(cut = false) } }
+                }
+                item(key = "cut") {
+                    MenuCard(
+                        icon = R.drawable.ic_content_cut,
+                        title = "剪切",
+                        subtitle = "移动后原位置不再保留",
+                        accent = palette.warning,
+                    ) { closeWith { vm.copySelection(cut = true) } }
+                }
+                item(key = "delete") {
+                    MenuCard(
+                        icon = Icons.Filled.Delete,
+                        title = "删除",
+                        subtitle = "移到回收站，可恢复",
+                        accent = palette.danger,
+                    ) { closeWith { vm.requestDelete(selected) } }
+                }
+                if (selected.size == 1) {
+                    item(key = "rename") {
+                        MenuCard(
+                            icon = Icons.Filled.Edit,
+                            title = "重命名",
+                            subtitle = selected.first().name,
+                            accent = palette.muted,
+                        ) { closeWith { vm.requestRename(selected.first()) } }
+                    }
+                }
+                item(key = "compress") {
+                    MenuCard(
+                        icon = R.drawable.ic_kind_archive,
+                        title = "压缩为 ZIP",
+                        subtitle = "支持加密，稍后可在详情中设置",
+                        accent = palette.archive,
+                    ) { closeWith { vm.requestCompress(selected) } }
+                }
+                item(key = "share") {
+                    MenuCard(
+                        icon = Icons.Filled.Share,
+                        title = "分享到其他应用",
+                        subtitle = null,
+                        accent = palette.image,
+                    ) { closeWith { vm.share(selected) } }
+                }
+                item(key = "send") {
+                    MenuCard(
+                        icon = Icons.Filled.Send,
+                        title = "发送到附近设备",
+                        subtitle = "局域网直连",
+                        accent = palette.video,
+                    ) { closeWith { vm.navigate(Screen.Devices) } }
+                }
+                item(key = "all") {
+                    MenuCard(
+                        icon = Icons.Filled.Done,
+                        title = "全选",
+                        subtitle = "共 ${browse.entries.size} 项",
+                        accent = palette.muted,
+                    ) { vm.selectAll() }
+                }
+                item(key = "exit") {
+                    MenuCard(
+                        icon = Icons.Filled.Clear,
+                        title = "退出选择",
+                        subtitle = null,
+                        accent = palette.muted,
+                    ) { closeWith { vm.clearSelection() } }
+                }
+                return@ScalingLazyColumn
+            }
+
+            // ---------------- 普通态 ----------------
+            clipboard?.let { clip ->
+                item(key = "paste") {
+                    MenuCard(
+                        icon = R.drawable.ic_content_paste,
+                        title = "粘贴",
+                        subtitle = "${if (clip.mode == ClipMode.CUT) "剪切" else "复制"} ${clip.count} 项 · ${formatBytes(clip.totalBytes)}",
+                        accent = palette.success,
+                    ) { closeWith { vm.paste() } }
                 }
             }
-            item(key = "cut") {
-                RoundListRow("剪", "剪切", palette.warning, subtitle = "移动后原位置不再保留") {
-                    closeWith { vm.copySelection(cut = true) }
+
+            item(key = "newFolder") {
+                MenuCard(
+                    icon = R.drawable.ic_kind_folder,
+                    title = "新建文件夹",
+                    subtitle = null,
+                    accent = palette.folder,
+                ) {
+                    createMode = CreateMode.FOLDER
+                    input = "新建文件夹"
                 }
             }
-            item(key = "delete") {
-                RoundListRow(
-                    "删", "删除", palette.danger,
-                    subtitle = "移到回收站，可恢复",
-                ) { closeWith { vm.requestDelete(selected) } }
+            item(key = "newFile") {
+                MenuCard(
+                    icon = Icons.Filled.Create,
+                    title = "新建文件",
+                    subtitle = null,
+                    accent = palette.document,
+                ) {
+                    createMode = CreateMode.FILE
+                    input = "新建文件.txt"
+                }
             }
-            if (selected.size == 1) {
-                item(key = "rename") {
-                    RoundListRow("名", "重命名", palette.muted, subtitle = selected.first().name) {
-                        closeWith { vm.requestRename(selected.first()) }
+
+            item(key = "sortTitle") { SectionHeader("排序") }
+            SortKey.entries.forEach { key ->
+                item(key = "sort_${key.name}") {
+                    RadioButton(
+                        selected = browse.sort.key == key,
+                        onSelect = { vm.setSortKey(key) },
+                        modifier = Modifier.fillMaxWidth(0.86f),
+                    ) {
+                        Text(
+                            text = key.label,
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                        )
                     }
                 }
             }
-            item(key = "compress") {
-                RoundListRow("压", "压缩为 ZIP", palette.archive, subtitle = "支持加密，稍后可在详情中设置") {
-                    closeWith { vm.requestCompress(selected) }
-                }
-            }
-            item(key = "share") {
-                RoundListRow("享", "分享到其他应用", palette.image) {
-                    closeWith { vm.share(selected) }
-                }
-            }
-            item(key = "send") {
-                RoundListRow("传", "发送到附近设备", palette.video, subtitle = "局域网直连") {
-                    closeWith { vm.navigate(Screen.Devices) }
-                }
-            }
-            item(key = "fav") {
-                RoundListRow("藏", "收藏", palette.warning) {
-                    selected.firstOrNull()?.let { vm.toggleFavorite(it) }
-                    vm.back()
-                }
-            }
-            item(key = "all") {
-                RoundListRow("全", "全选", palette.muted, subtitle = "共 ${browse.entries.size} 项") {
-                    vm.selectAll()
-                }
-            }
-            item(key = "exit") {
-                RoundListRow("退", "退出选择", palette.muted) { closeWith { vm.clearSelection() } }
-            }
-            return@ScalingLazyColumn
-        }
-
-        // ---------------- 普通态 ----------------
-        clipboard?.let { clip ->
-            item(key = "paste") {
-                RoundListRow(
-                    "粘", "粘贴", palette.success,
-                    subtitle = "${if (clip.mode == ClipMode.CUT) "剪切" else "复制"} ${clip.count} 项 · ${formatBytes(clip.totalBytes)}",
-                ) { closeWith { vm.paste() } }
-            }
-        }
-
-        item(key = "newFolder") {
-            RoundListRow("夹", "新建文件夹", palette.folder) {
-                createMode = CreateMode.FOLDER
-                input = "新建文件夹"
-            }
-        }
-        item(key = "newFile") {
-            RoundListRow("文", "新建文件", palette.document) {
-                createMode = CreateMode.FILE
-                input = "新建文件.txt"
-            }
-        }
-
-        item(key = "sortTitle") {
-            Text(text = "排序", fontSize = 9.sp, color = palette.muted, modifier = Modifier.padding(top = 4.dp))
-        }
-        SortKey.entries.forEach { key ->
-            item(key = "sort_${key.name}") {
-                val active = browse.sort.key == key
-                RoundListRow(
-                    glyph = when (key) {
-                        SortKey.NAME -> "名"
-                        SortKey.DATE -> "日"
-                        SortKey.SIZE -> "大"
-                    },
-                    title = key.label,
-                    color = if (active) MaterialTheme.colorScheme.primary else palette.muted,
-                    selected = active,
-                    trailing = if (active) (if (browse.sort.descending) "↓" else "↑") else null,
-                ) { vm.setSortKey(key) }
-            }
-        }
-
-        item(key = "filterTitle") {
-            Text(text = "筛选", fontSize = 9.sp, color = palette.muted, modifier = Modifier.padding(top = 4.dp))
-        }
-        item(key = "filterRow1") {
-            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                listOf(KindFilter.ALL, KindFilter.IMAGE, KindFilter.VIDEO).forEach { filter ->
-                    RoundTextAction(
-                        text = filter.label,
-                        onClick = { vm.setFilter(filter) },
-                        container = if (browse.filter == filter) MaterialTheme.colorScheme.primaryContainer else palette.card,
-                        contentColor = if (browse.filter == filter) MaterialTheme.colorScheme.onPrimaryContainer else palette.muted,
+            item(key = "sortDir") {
+                CompactButton(
+                    onClick = { vm.applySort(browse.sort.toggleDirection()) },
+                    modifier = Modifier.fillMaxWidth(0.6f),
+                ) {
+                    Text(
+                        text = if (browse.sort.descending) "当前：降序" else "当前：升序",
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
                     )
                 }
             }
-        }
-        item(key = "filterRow2") {
-            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                listOf(KindFilter.AUDIO, KindFilter.DOCUMENT, KindFilter.ARCHIVE, KindFilter.APK).forEach { filter ->
-                    RoundTextAction(
-                        text = filter.label,
-                        onClick = { vm.setFilter(filter) },
-                        container = if (browse.filter == filter) MaterialTheme.colorScheme.primaryContainer else palette.card,
-                        contentColor = if (browse.filter == filter) MaterialTheme.colorScheme.onPrimaryContainer else palette.muted,
-                    )
+
+            item(key = "filterTitle") { SectionHeader("筛选") }
+            val filters = listOf(
+                KindFilter.ALL, KindFilter.IMAGE, KindFilter.VIDEO, KindFilter.AUDIO,
+                KindFilter.DOCUMENT, KindFilter.ARCHIVE, KindFilter.APK,
+            )
+            items(filters.chunked(2).size, key = { "frow_$it" }) { rowIndex ->
+                val pair = filters.chunked(2)[rowIndex]
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    pair.forEach { filter ->
+                        TextToggleButton(
+                            checked = browse.filter == filter,
+                            onCheckedChange = { vm.setFilter(filter) },
+                        ) {
+                            Text(
+                                text = filter.label,
+                                style = MaterialTheme.typography.labelMedium,
+                                maxLines = 1,
+                            )
+                        }
+                    }
                 }
             }
-        }
 
-        item(key = "path") {
-            RoundListRow("径", "输入路径", palette.muted, subtitle = "精确跳转 / 访问已授权目录") {
-                closeWith { vm.navigate(Screen.PathInput) }
+            item(key = "path") {
+                MenuCard(
+                    icon = Icons.Filled.Place,
+                    title = "输入路径",
+                    subtitle = "精确跳转 / 访问已授权目录",
+                    accent = palette.muted,
+                ) { closeWith { vm.navigate(Screen.PathInput) } }
             }
-        }
 
-        item(key = "switchTitle") {
-            Text(text = "切换位置", fontSize = 9.sp, color = palette.muted, modifier = Modifier.padding(top = 4.dp))
-        }
-        items(roots.size, key = { "root_${roots[it].id}" }) { index ->
-            val location = roots[index]
-            RoundListRow(
-                glyph = "位",
-                title = location.name,
-                color = palette.folder,
-                selected = location.id == browse.location?.id,
-            ) { closeWith { vm.openLocationFromOverlay(location) } }
-        }
+            item(key = "switchTitle") { SectionHeader("切换位置") }
+            items(roots.size, key = { "root_${roots[it].id}" }) { index ->
+                val location = roots[index]
+                MenuCard(
+                    icon = Icons.Filled.List,
+                    title = location.name,
+                    subtitle = null,
+                    accent = palette.folder,
+                ) { closeWith { vm.openLocationFromOverlay(location) } }
+            }
 
-        item(key = "refresh") {
-            RoundListRow("刷", "刷新目录", palette.muted) { closeWith { vm.refresh() } }
-        }
-        item(key = "settings") {
-            RoundListRow("设", "设置", palette.muted) { closeWith { vm.navigate(Screen.Settings) } }
+            item(key = "refresh") {
+                MenuCard(
+                    icon = Icons.Filled.Refresh,
+                    title = "刷新目录",
+                    subtitle = null,
+                    accent = palette.muted,
+                ) { closeWith { vm.refresh() } }
+            }
+            item(key = "settings") {
+                MenuCard(
+                    icon = Icons.Filled.Settings,
+                    title = "设置",
+                    subtitle = null,
+                    accent = palette.muted,
+                ) { closeWith { vm.navigate(Screen.Settings) } }
+            }
         }
     }
 }
