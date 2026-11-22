@@ -27,6 +27,21 @@ class StorageGateway(private val context: Context) {
 
     private val resolver get() = context.contentResolver
 
+    /**
+     * 从「tree URI 或 document URI」里取出根文档 id。
+     * ACTION_OPEN_DOCUMENT_TREE / persistedUriPermissions 返回的是 tree URI
+     * （路径形如 /tree/primary%3ADownload，没有 document 段），
+     * 对它调 getDocumentId 会抛 IllegalArgumentException——这正是
+     * "授权目录永远列不出来、真实存储读不到文件"的根因。
+     * 必须用 getTreeDocumentId；document URI 则继续走 getDocumentId。
+     */
+    private fun rootDocumentId(uri: Uri): String =
+        if (uri.pathSegments?.firstOrNull() == "tree") {
+            DocumentsContract.getTreeDocumentId(uri)
+        } else {
+            DocumentsContract.getDocumentId(uri)
+        }
+
     // ---------------------------------------------------------------- 位置枚举
 
     /** 沙盒目录：应用内部存储 + 应用外部私有目录。无需任何权限。 */
@@ -44,7 +59,7 @@ class StorageGateway(private val context: Context) {
             .mapNotNull { permission ->
                 val tree = permission.uri
                 runCatching {
-                    val docId = DocumentsContract.getDocumentId(tree)
+                    val docId = rootDocumentId(tree)
                     val docUri = DocumentsContract.buildDocumentUriUsingTree(tree, docId)
                     val name = displayName(docUri) ?: tree.lastPathSegment ?: "已授权目录"
                     Location(docUri, tree, name)
@@ -62,7 +77,7 @@ class StorageGateway(private val context: Context) {
             treeUri,
             Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
         )
-        val docId = DocumentsContract.getDocumentId(treeUri)
+        val docId = rootDocumentId(treeUri)
         val docUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
         Location(docUri, treeUri, displayName(docUri) ?: "已授权目录")
     }.getOrNull()
