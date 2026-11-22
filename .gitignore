@@ -3,9 +3,11 @@
 .DS_Store
 .gradle/
 .idea/
+.workbuddy-ai/
 app/build/
 app/release-key.jks
 build/
 deliverables/
 local.properties
+local.properties.bak
 release-key.jks
