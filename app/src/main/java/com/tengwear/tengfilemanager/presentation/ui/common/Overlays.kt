@@ -24,9 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -34,8 +32,6 @@ import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.Button
-import androidx.wear.compose.material3.Card
-import androidx.wear.compose.material3.CardDefaults
 import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.Dialog
 import androidx.wear.compose.material3.Icon
@@ -47,16 +43,13 @@ import com.tengwear.tengfilemanager.core.model.ConfirmSpec
 import com.tengwear.tengfilemanager.core.model.OpProgress
 import com.tengwear.tengfilemanager.core.util.formatBytes
 import com.tengwear.tengfilemanager.presentation.FileManagerViewModel
-import com.tengwear.tengfilemanager.presentation.theme.LocalTengPalette
-import com.tengwear.tengfilemanager.presentation.ui.common.MenuCard
 import kotlinx.coroutines.delay
 
 /**
  * 模态覆盖层。
  *
- * 全部换成官方 M3E 弹层：[AlertDialog] 做确认，[Dialog] 做进度与轻提示。
- * 自绘的"整圆压暗 + 居中文字"已删除——官方弹层自带
- * 滑动手势关闭、进出场动画和无障碍语义，自己画的那套三样都没有。
+ * 全部用官方 M3E 弹层：[AlertDialog] 做确认，[Dialog] 做进度与轻提示。
+ * 官方弹层自带滑动手势关闭、进出场动画和无障碍语义。
  */
 
 @Composable
@@ -65,7 +58,6 @@ fun ConfirmOverlay(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val palette = LocalTengPalette.current
     AlertDialog(
         visible = true,
         onDismissRequest = onDismiss,
@@ -84,7 +76,7 @@ fun ConfirmOverlay(
                 Icon(
                     imageVector = Icons.Filled.Warning,
                     contentDescription = null,
-                    tint = palette.danger,
+                    tint = MaterialTheme.colorScheme.error,
                 )
             }
         } else {
@@ -94,7 +86,7 @@ fun ConfirmOverlay(
             Text(
                 text = spec.title,
                 style = MaterialTheme.typography.titleMedium,
-                color = if (spec.danger) palette.danger else MaterialTheme.colorScheme.onSurface,
+                color = if (spec.danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
             )
         },
@@ -112,10 +104,9 @@ fun ConfirmOverlay(
 @Composable
 fun ProgressOverlay(progress: OpProgress, onCancel: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
-    val palette = LocalTengPalette.current
     Dialog(visible = true, onDismissRequest = onCancel) {
         Column(
-            modifier = Modifier.widthIn(max = 168.dp),
+            modifier = Modifier.widthIn(max = 180.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
@@ -140,7 +131,7 @@ fun ProgressOverlay(progress: OpProgress, onCancel: () -> Unit) {
                 } else {
                     "${(progress.fraction * 100).toInt()}%"
                 },
-                style = MaterialTheme.typography.displaySmall,
+                style = MaterialTheme.typography.titleLarge,
                 color = scheme.primary,
                 maxLines = 1,
             )
@@ -148,7 +139,7 @@ fun ProgressOverlay(progress: OpProgress, onCancel: () -> Unit) {
                 Text(
                     text = progress.currentName,
                     style = MaterialTheme.typography.labelSmall,
-                    color = palette.muted,
+                    color = scheme.onSurfaceVariant,
                     maxLines = 1,
                     textAlign = TextAlign.Center,
                 )
@@ -157,7 +148,7 @@ fun ProgressOverlay(progress: OpProgress, onCancel: () -> Unit) {
                 Text(
                     text = "${formatBytes(progress.bytesDone)} / ${formatBytes(progress.bytesTotal)}",
                     style = MaterialTheme.typography.labelSmall,
-                    color = palette.muted,
+                    color = scheme.onSurfaceVariant,
                     maxLines = 1,
                 )
             }
@@ -178,7 +169,7 @@ fun MessageOverlay(text: String, onDismiss: () -> Unit) {
     Dialog(visible = true, onDismissRequest = onDismiss) {
         Box(
             modifier = Modifier
-                .widthIn(max = 176.dp)
+                .widthIn(max = 180.dp)
                 .clip(RoundedCornerShape(28.dp))
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                 .padding(horizontal = 14.dp, vertical = 10.dp),
@@ -237,7 +228,7 @@ fun RenameOverlay(
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val palette = LocalTengPalette.current
+    val scheme = MaterialTheme.colorScheme
     val stem = currentName.substringBeforeLast('.', currentName)
     val ext = currentName.substringAfterLast('.', "")
     var text by remember(currentName) { mutableStateOf(stem) }
@@ -271,19 +262,19 @@ fun RenameOverlay(
                     value = text,
                     onValueChange = { text = it },
                     singleLine = true,
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = scheme.onSurface),
+                    cursorBrush = SolidColor(scheme.primary),
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(50))
-                        .background(palette.card)
+                        .background(scheme.surfaceContainer)
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                 )
                 if (ext.isNotEmpty()) {
                     Text(
                         text = ".$ext",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = scheme.onSurfaceVariant,
                     )
                 }
             }
@@ -300,33 +291,32 @@ fun RenameOverlay(
  */
 @Composable
 fun PathInputScreen(vm: FileManagerViewModel) {
+    val scheme = MaterialTheme.colorScheme
     val roots by vm.roots.collectAsStateWithLifecycle()
     val state = rememberScalingLazyListState()
     var input by remember { mutableStateOf("") }
     var hint by remember { mutableStateOf<String?>(null) }
 
-    ScreenScaffold(scrollState = state, edgeButton = {}) { _ ->
+    ScreenScaffold(scrollState = state, edgeButton = {}) { padding ->
         ScalingLazyColumn(
             state = state,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = 6.dp, bottom = 44.dp),
-            autoCentering = null,
+            contentPadding = padding,
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(5.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            item(key = "gap") { ClockGap(28.dp) }
             item(key = "title") { SectionHeader("输入路径") }
             item(key = "input") {
                 BasicTextField(
                     value = input,
                     onValueChange = { input = it },
                     singleLine = true,
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = scheme.onSurface),
+                    cursorBrush = SolidColor(scheme.primary),
                     modifier = Modifier
-                        .fillMaxWidth(0.86f)
+                        .fillMaxWidth()
                         .clip(RoundedCornerShape(50))
-                        .background(MaterialTheme.colorScheme.surfaceContainer)
+                        .background(scheme.surfaceContainer)
                         .padding(horizontal = 14.dp, vertical = 9.dp),
                 )
             }
@@ -335,9 +325,9 @@ fun PathInputScreen(vm: FileManagerViewModel) {
                     Text(
                         text = text,
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.error,
+                        color = scheme.error,
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth(0.86f),
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }
@@ -366,26 +356,9 @@ fun PathInputScreen(vm: FileManagerViewModel) {
                 MenuCard(
                     icon = Icons.Filled.Place,
                     title = location.name,
-                    subtitle = null,
-                    accent = MaterialTheme.colorScheme.primary,
+                    accent = scheme.primary,
                 ) { vm.openLocationFromOverlay(location) }
             }
         }
-    }
-}
-
-/** 供 PathInputScreen 复用的卡片容器（M3E Card 的轻量封装）。 */
-@Composable
-internal fun InputCard(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    Card(
-        onClick = {},
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-        modifier = modifier.fillMaxWidth(0.86f),
-    ) {
-        content()
     }
 }

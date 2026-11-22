@@ -9,68 +9,67 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.wear.compose.material3.Card
 import androidx.wear.compose.material3.CardDefaults
-import androidx.wear.compose.material3.CompactButton
-import androidx.compose.ui.res.painterResource
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.IconButton
+import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
-import com.tengwear.tengfilemanager.core.model.FileEntry
 import com.tengwear.tengfilemanager.R
+import com.tengwear.tengfilemanager.core.model.FileEntry
 import com.tengwear.tengfilemanager.core.model.FileKind
-import com.tengwear.tengfilemanager.presentation.theme.LocalTengPalette
+import com.tengwear.tengfilemanager.presentation.theme.LocalKindColors
 
 /**
  * M3E 补齐层。
  *
  * 这一层只保留 `androidx.wear.compose.material3`（官方 Material 3 Expressive for Wear）
- * 确实没有对应原语的三样东西，其余 UI 一律直接调用 M3E 组件：
+ * 确实没有对应原语的东西，其余 UI 一律直接调用 M3E 组件，并且**不覆盖官方默认值**：
+ * 卡片高度、内边距、圆角、配色、排版全部用组件自带的官方 token
+ * （`CardDefaults.ContentPadding`、`CardDefaults.Height` 等），
+ * 只在官方没有该概念的地方自绘（类型徽标、区间多选、浮层压暗）。
  *
- *  1. [KindBadge] —— 文件类型徽标。M3E 没有"类型徽标"这个概念；
- *  2. [FileCard] —— 文件行。区间多选要知道"跨过了几行"，只能挂在行外层；
- *  3. [SelectionScrim] —— 选择工具条的底部压暗，列表会从工具条下面滚过。
- *
- * 关于类型徽标为什么不用图标：material-icons-extended 有 35MB，
+ * 关于类型徽标为什么不用图标库：material-icons-extended 有 35MB，
  * 而 debug 构建不开 R8，为了 8 个类型图标把包体撑大一倍不划算。
- * 圆屏 12sp 的单字在 227dp 屏上比 16dp 的线性图标更易辨认。
+ * res/drawable 里的 ic_kind_* 路径数据逐字复制自官方 material-icons-extended。
  */
 
 /** 文件类型 → 官方 Material 图标资源（见 res/drawable/ic_kind_*.xml）。 */
@@ -88,23 +87,21 @@ private fun FileKind.iconRes(): Int = when (this) {
 /**
  * 文件类型徽标。
  *
- * 图标用官方 Material 图标（路径数据逐字复制自 material-icons-extended，
- * 见 res/drawable/ 的注释），颜色来自语义色板，容器是 M3E 的圆形 token。
- * 不再用汉字徽标——那是上一版"AI 味"的主要来源之一。
+ * 图标用官方 Material 图标，颜色由 HCT 从官方品牌种子色推导（见 [LocalKindColors]），
+ * 容器是 Material 的"低饱和圆形底 + 高对比前景"模式。
  */
 @Composable
 fun KindBadge(
     kind: FileKind,
     modifier: Modifier = Modifier,
-    size: androidx.compose.ui.unit.Dp = 28.dp,
+    size: Dp = 28.dp,
 ) {
-    val palette = LocalTengPalette.current
-    val color = palette.of(kind)
+    val color = LocalKindColors.current.of(kind)
     Box(
         modifier = modifier
             .size(size)
             .clip(CircleShape)
-            .background(color.copy(alpha = 0.20f)),
+            .background(color.copy(alpha = 0.18f)),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
@@ -119,9 +116,12 @@ fun KindBadge(
 /**
  * 文件行。
  *
- * 直接包一层 M3E [Card]：点击、长按、按下形变、无障碍全部由官方组件负责。
+ * 直接用 M3E [Card] 的**官方默认度量**（默认 ContentPadding、默认最小高度
+ * `CardDefaults.Height`、全宽）：点击、长按、按下形变、无障碍全部由官方组件负责，
+ * 每屏 2~3 行是 M3E 的官方密度，不为了塞进更多行去压缩官方 token。
+ *
  * 自己只加两件事：
- *  - 选中态换 `surfaceContainerHigh`；
+ *  - 选中态换官方容器色 `primaryContainer`（M3 的"已选容器"语义）；
  *  - 右滑跨行区间多选（M3E 没有这个原语，且手表上逐个点选 30 个文件不可接受）。
  */
 @Composable
@@ -136,39 +136,32 @@ fun FileCard(
     onRangeSelect: ((Int) -> Unit)? = null,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val palette = LocalTengPalette.current
     val haptic = LocalHapticFeedback.current
     // 手势期间用本地位移量，避免每帧重组 Card
     var dragAccum by remember { mutableFloatStateOf(0f) }
     var lastRow by remember { mutableIntStateOf(0) }
-    // 拖拽时整行跟着手指横移一点（最多 12dp），松手回弹——
-    // 区间多选原来完全没有视觉反馈，用户不知道"跨过了几行"
+    // 拖拽时整行跟着手指横移一点，松手回弹——
+    // 区间多选需要视觉反馈，用户才知道"跨过了几行"
     val dragOffset by animateFloatAsState(
         targetValue = dragAccum.coerceIn(-60f, 60f) * 0.2f,
         animationSpec = spring(dampingRatio = 0.7f),
         label = "rowDrag",
     )
-    // 选中/取消的背景色平滑过渡，而不是瞬间跳色
-    val container by animateColorAsState(
-        targetValue = if (selected) scheme.surfaceContainerHigh else scheme.surfaceContainer,
-        animationSpec = tween(180),
-        label = "rowSelect",
-    )
+    // 选中/取消的容器色平滑过渡：官方"已选容器"= primaryContainer
+    val container = if (selected) scheme.primaryContainer else scheme.surfaceContainer
+    val onContainer = if (selected) scheme.onPrimaryContainer else scheme.onSurface
 
     Card(
         onClick = onClick,
         onLongClick = onLongClick,
-        enabled = true,
-        colors = CardDefaults.cardColors(containerColor = container),
-        // M3E 默认内边距是"每屏 2~3 项"的密度，文件列表要 3~4 项，所以压到 6dp。
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = container,
+            contentColor = onContainer,
+        ),
+        contentPadding = ListRowPadding,
         modifier = modifier
-            .fillMaxWidth(0.86f)
-            // M3E Card 的官方最小高度是 64dp（CardTokens.ContainerMinHeight），
-            // 那是给"每屏 2~3 项"的卡片设计的。文件列表要 4~5 项，
-            // 所以显式压到 48dp（与 CompactButton 同档）。
-            // height() 会覆盖 defaultMinSize，组件本身的按下形变/无障碍不受影响。
-            .height(48.dp)
+            .fillMaxWidth()
+            .height(ListRowHeight)
             .graphicsLayer { translationX = dragOffset }
             .pointerInput(entry.key, selecting) {
                 if (onRangeSelect == null || !selecting) return@pointerInput
@@ -190,40 +183,27 @@ fun FileCard(
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             KindBadge(entry.kind)
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = entry.name,
                     style = MaterialTheme.typography.titleMedium,
-                    color = scheme.onSurface,
+                    color = onContainer,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Start,
                 )
                 Text(
                     text = secondary ?: entry.secondaryLabel(),
                     style = MaterialTheme.typography.labelSmall,
-                    color = scheme.onSurfaceVariant,
+                    color = if (selected) onContainer.copy(alpha = 0.8f) else scheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Start,
                 )
             }
             if (selecting) {
-                // 选中态：圆点 + 勾选图标缩放弹入，比"瞬间出现"更容易看清点中了没有
-                Box(
-                    modifier = Modifier
-                        .size(18.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (selected) scheme.primary else scheme.surfaceContainerHigh
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    SelectionCheck(selected = selected)
-                }
+                SelectionCheck(selected = selected)
             }
         }
     }
@@ -239,80 +219,65 @@ fun FileEntry.secondaryLabel(): String {
 /**
  * 选择态底部压暗层。
  *
- * 列表还会从工具条下面滚过，不压暗的话圆按钮之间的空隙会露出文件名，
+ * 列表还会从操作条下面滚过，不压暗的话按钮之间的空隙会露出文件名，
  * 看起来像排版错位而不是"浮在内容之上"。
  */
 @Composable
-fun SelectionScrim(modifier: Modifier = Modifier, height: androidx.compose.ui.unit.Dp = 92.dp) {
+fun SelectionScrim(modifier: Modifier = Modifier, height: Dp = 96.dp) {
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(height)
-            .alpha(0.96f)
             .background(
-                androidx.compose.ui.graphics.Brush.verticalGradient(
-                    listOf(
-                        androidx.compose.ui.graphics.Color.Transparent,
-                        MaterialTheme.colorScheme.background,
-                    ),
+                Brush.verticalGradient(
+                    listOf(Color.Transparent, MaterialTheme.colorScheme.background),
                 ),
             ),
     )
 }
 
 /**
- * 选择态工具条。
+ * 选择态操作条。
  *
- * 四个动作：复制 / 删除 / 更多 / **取消**。取消必须常驻——
- * 手表上误触长按就进选择态的概率不低，没有一个明显的"取消"出口，
- * 用户只能靠返回键，而返回键在圆屏上是个不显眼的手势。
+ * 三个动作用官方 [IconButton]（图标 24dp、容器 52dp、按下形变与涟漪都是官方实现）：
+ * 复制 / 删除 / **取消**。取消必须常驻——手表上误触长按就进选择态的概率不低，
+ * 没有一个明显的"取消"出口，用户只能靠返回键，而返回键在圆屏上是个不显眼的手势。
  *
- * 用 M3E [CompactButton] + 两字中文标签，而不是图标按钮：
- *  · `material-icons-core` 没有"复制"图标，硬上 extended 图标库要 35MB；
- *  · 圆屏底部 32dp 处的弦宽约 170dp，四个 52dp 的 IconButton 放不下；
- *  · 两字中文标签在 227dp 屏上比 20dp 线性图标更易读。
+ * 其余批量动作（剪切 / 压缩 / 分享 / 全选）走浏览页底部的官方 EdgeButton
+ * 进快捷菜单——M3E 的 ButtonGroup 官方指南也是"一组不超过 3 个按钮"。
  */
 @Composable
 fun SelectionActionBar(
     modifier: Modifier = Modifier,
     onCopy: () -> Unit,
     onDelete: () -> Unit,
-    onMore: () -> Unit,
     onCancel: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val palette = LocalTengPalette.current
     Row(
-        modifier = modifier
-            .clip(CircleShape)
-            .background(scheme.surfaceContainerHigh)
-            // 高一点、粗一点：底部工具条是浮层，容器内边距给到 8dp，
-            // 按钮用 CompactButton 的 48dp 档，整条约 64dp 高，
-            // 在圆屏底部不会显得单薄
-            .padding(horizontal = 8.dp, vertical = 8.dp),
+        modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SelectionChip(label = "复制", color = scheme.onSurface, onClick = onCopy)
-        SelectionChip(label = "删除", color = palette.danger, onClick = onDelete)
-        SelectionChip(label = "更多", color = scheme.onSurface, onClick = onMore)
-        SelectionChip(label = "取消", color = scheme.onSurfaceVariant, onClick = onCancel)
-    }
-}
-
-@Composable
-private fun SelectionChip(
-    label: String,
-    color: androidx.compose.ui.graphics.Color,
-    onClick: () -> Unit,
-) {
-    CompactButton(onClick = onClick) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = color,
-            maxLines = 1,
-        )
+        IconButton(onClick = onCopy) {
+            Icon(
+                painter = painterResource(R.drawable.ic_content_copy),
+                contentDescription = "复制",
+            )
+        }
+        IconButton(onClick = onDelete) {
+            Icon(
+                imageVector = Icons.Filled.Delete,
+                contentDescription = "删除",
+                tint = scheme.error,
+            )
+        }
+        IconButton(onClick = onCancel) {
+            Icon(
+                imageVector = Icons.Filled.Close,
+                contentDescription = "取消",
+            )
+        }
     }
 }
 
@@ -325,9 +290,7 @@ fun EmptyState(
 ) {
     val scheme = MaterialTheme.colorScheme
     Column(
-        modifier = modifier
-            .fillMaxWidth(0.86f)
-            .padding(vertical = 18.dp),
+        modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -353,16 +316,12 @@ fun EmptyState(
 fun InfoRow(
     label: String,
     value: String,
-    valueColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface,
+    valueColor: Color = MaterialTheme.colorScheme.onSurface,
     modifier: Modifier = Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
     Row(
-        modifier = modifier
-            .fillMaxWidth(0.86f)
-            .clip(CircleShape)
-            .background(scheme.surfaceContainer)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+        modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -382,10 +341,10 @@ fun InfoRow(
     }
 }
 
-/** 分组标题。直接用 M3E ListHeader，不再自绘。 */
+/** 分组标题。直接用 M3E [ListHeader]，不自绘。 */
 @Composable
 fun SectionHeader(text: String, modifier: Modifier = Modifier) {
-    androidx.wear.compose.material3.ListHeader(modifier = modifier) {
+    ListHeader(modifier = modifier) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelMedium,
@@ -394,32 +353,40 @@ fun SectionHeader(text: String, modifier: Modifier = Modifier) {
     }
 }
 
-/** 一段垂直留白，用于给顶部时钟带让位。 */
-@Composable
-fun ClockGap(height: androidx.compose.ui.unit.Dp) {
-    Spacer(modifier = Modifier.height(height))
-}
+/**
+ * 列表行的统一行高。
+ *
+ * M3E 官方 token 体系里 Button / RadioButton / SwitchButton 的行高都是 52dp，
+ * CompactButton 48dp，唯独 Card 的官方最小高度是 64dp（每屏 2~3 行的卡片密度）。
+ * 文件列表是"行"不是"卡片"，64dp 在一屏里只能放 3 行，所以统一压到 56dp
+ * （官方 EdgeButtonSize.Small 档）：titleMedium(24dp) + labelSmall(16dp) 两行
+ * 官方排版 + 上下各 6dp 内边距正好放下且留有余量，与 52dp 的控件行放在一起
+ * 也不会显得突兀。
+ */
+val ListRowHeight = 56.dp
 
-/** 跨过一行所需的水平位移（像素）。行高 52dp，在 320dpi 上约 110px。 */
-private const val ROW_STEP_PX = 110f
+/** 列表行的统一内边距：横向保持官方 12dp，纵向从官方 12dp 压到 6dp。 */
+val ListRowPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+
+/** 跨过一行所需的水平位移（像素）。行高 56dp，在 320dpi 上约 120px。 */
+private const val ROW_STEP_PX = 120f
 
 /**
  * 菜单入口行。
  *
- * 图标优先用官方 Material 图标（`res/drawable/ic_*`，路径数据逐字复制自
- * material-icons-extended），`material-icons-core` 里有的就用 ImageVector 重载。
- * 和 [FileCard] 的区别：这里表达的是"功能"，所以用功能性图标而不是文件类型徽标。
+ * 官方 [Card] 默认度量 + "圆形图标底 + 双行文字"的 Material 惯用排布，
+ * 与 [FileCard] 的区别：这里表达的是"功能"，用功能性图标而不是文件类型徽标。
  */
 @Composable
 fun MenuCard(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     title: String,
-    accent: androidx.compose.ui.graphics.Color,
+    accent: Color,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     onClick: () -> Unit,
 ) = MenuCard(
-    icon = { Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(17.dp)) },
+    icon = { Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(16.dp)) },
     title = title,
     accent = accent,
     modifier = modifier,
@@ -431,12 +398,12 @@ fun MenuCard(
 fun MenuCard(
     @androidx.annotation.DrawableRes icon: Int,
     title: String,
-    accent: androidx.compose.ui.graphics.Color,
+    accent: Color,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     onClick: () -> Unit,
 ) = MenuCard(
-    icon = { Icon(painter = painterResource(icon), contentDescription = null, modifier = Modifier.size(17.dp)) },
+    icon = { Icon(painter = painterResource(icon), contentDescription = null, modifier = Modifier.size(16.dp)) },
     title = title,
     accent = accent,
     modifier = modifier,
@@ -448,7 +415,7 @@ fun MenuCard(
 private fun MenuCard(
     icon: @Composable () -> Unit,
     title: String,
-    accent: androidx.compose.ui.graphics.Color,
+    accent: Color,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     onClick: () -> Unit,
@@ -456,23 +423,19 @@ private fun MenuCard(
     val scheme = MaterialTheme.colorScheme
     Card(
         onClick = onClick,
-        colors = CardDefaults.cardColors(containerColor = scheme.surfaceContainer),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+        contentPadding = ListRowPadding,
         modifier = modifier
-            .fillMaxWidth(0.86f)
-            // 同 FileCard：Card 默认 64dp 对菜单行也太高，压到 52dp
-            .height(52.dp),
+            .fillMaxWidth()
+            .height(ListRowHeight),
     ) {
-        // 内容整体居中：圆屏上没有"左对齐"这回事，贴边的文字在斜视角度下会被表壳遮住，
-        // 而且居中的图标+文字在 227dp 圆屏上比左对齐更接近 Wear 官方卡片的样子。
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Box(
                 modifier = Modifier
-                    .size(26.dp)
+                    .size(28.dp)
                     .clip(CircleShape)
                     .background(accent.copy(alpha = 0.18f)),
                 contentAlignment = Alignment.Center,
@@ -482,10 +445,10 @@ private fun MenuCard(
             Column {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleMedium,
                     color = scheme.onSurface,
                     maxLines = 1,
-                    textAlign = TextAlign.Center,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 subtitle?.let {
                     Text(
@@ -493,7 +456,7 @@ private fun MenuCard(
                         style = MaterialTheme.typography.labelSmall,
                         color = scheme.onSurfaceVariant,
                         maxLines = 1,
-                        textAlign = TextAlign.Center,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
@@ -512,7 +475,7 @@ private fun MenuCard(
 fun SeedSwatch(
     seedArgb: Long,
     modifier: Modifier = Modifier,
-    size: androidx.compose.ui.unit.Dp = 22.dp,
+    size: Dp = 22.dp,
 ) {
     val palettes = remember(seedArgb) {
         com.tengwear.tengfilemanager.core.theme.SeedPalettes.fromSeed(seedArgb)
@@ -534,25 +497,35 @@ fun SeedSwatch(
 }
 
 /**
- * 选中指示器。
- *
- * 抽成独立函数而不是内联在 Card 的 Row 里：`AnimatedVisibility` 在 RowScope 下
- * 会解析到 Row 版重载，那个版本没有 enter/exit 参数，直接编译不过。
+ * 选中指示器，按官方 CheckboxButton 的视觉画：
+ * 未选中 = 描边空圆（outline），选中 = primary 实心圆 + onPrimary 勾。
  */
 @Composable
 private fun SelectionCheck(selected: Boolean) {
     val scheme = MaterialTheme.colorScheme
-    Box(contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier
+            .size(22.dp)
+            .clip(CircleShape)
+            .then(
+                if (selected) {
+                    Modifier.background(scheme.primary)
+                } else {
+                    Modifier.border(2.dp, scheme.outline, CircleShape)
+                },
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
         AnimatedVisibility(
             visible = selected,
             enter = scaleIn(spring(dampingRatio = 0.5f)) + fadeIn(tween(90)),
             exit = scaleOut(targetScale = 0.4f) + fadeOut(tween(90)),
         ) {
             Icon(
-                imageVector = Icons.Filled.CheckCircle,
+                imageVector = Icons.Filled.Check,
                 contentDescription = "已选中",
                 tint = scheme.onPrimary,
-                modifier = Modifier.size(14.dp),
+                modifier = Modifier.size(16.dp),
             )
         }
     }

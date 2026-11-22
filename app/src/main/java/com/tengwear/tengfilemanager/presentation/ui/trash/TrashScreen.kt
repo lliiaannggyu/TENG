@@ -1,9 +1,9 @@
 package com.tengwear.tengfilemanager.presentation.ui.trash
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -15,21 +15,19 @@ import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.Card
-import androidx.wear.compose.material3.CardDefaults
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import com.tengwear.tengfilemanager.core.model.FileEntry
-import com.tengwear.tengfilemanager.core.model.FileKind
 import com.tengwear.tengfilemanager.core.util.daysBetween
 import com.tengwear.tengfilemanager.core.util.formatBytes
 import com.tengwear.tengfilemanager.core.util.formatRelativeTime
 import com.tengwear.tengfilemanager.presentation.CollectionType
 import com.tengwear.tengfilemanager.presentation.FileManagerViewModel
-import com.tengwear.tengfilemanager.presentation.theme.LocalTengPalette
-import com.tengwear.tengfilemanager.presentation.ui.common.ClockGap
 import com.tengwear.tengfilemanager.presentation.ui.common.EmptyState
 import com.tengwear.tengfilemanager.presentation.ui.common.FileCard
+import com.tengwear.tengfilemanager.presentation.ui.common.ListRowHeight
+import com.tengwear.tengfilemanager.presentation.ui.common.ListRowPadding
 import com.tengwear.tengfilemanager.presentation.ui.common.SectionHeader
 
 /**
@@ -37,28 +35,25 @@ import com.tengwear.tengfilemanager.presentation.ui.common.SectionHeader
  *
  * 交互：点按 = 恢复（最高频动作），长按 = 彻底删除（不可逆，需二次确认）。
  * 点按/长按由 M3E [Card] 的 `onClick` / `onLongClick` 承担——官方组件自带
- * 按下形变、水波纹和无障碍语义，自绘的 `combinedClickable` 版本三样都要自己补。
+ * 按下形变、涟漪和无障碍语义。
  * 不做"选中后底部操作条"——回收站里批量操作的价值远低于误操作风险。
  */
 @Composable
 fun TrashScreen(vm: FileManagerViewModel) {
-    val palette = LocalTengPalette.current
     val scheme = MaterialTheme.colorScheme
     val items by vm.trashItems.collectAsStateWithLifecycle()
     val state = rememberScalingLazyListState()
 
     LaunchedEffect(Unit) { vm.loadTrash() }
 
-    ScreenScaffold(scrollState = state, edgeButton = {}) { _ ->
+    ScreenScaffold(scrollState = state, edgeButton = {}) { padding ->
         ScalingLazyColumn(
             state = state,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = 6.dp, bottom = 44.dp),
-            autoCentering = null,
+            contentPadding = padding,
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            item(key = "gap") { ClockGap(26.dp) }
             item(key = "header") { SectionHeader("回收站") }
             item(key = "summary") {
                 Text(
@@ -85,9 +80,10 @@ fun TrashScreen(vm: FileManagerViewModel) {
                 Card(
                     onClick = { vm.restoreTrash(item) },
                     onLongClick = { vm.purgeTrash(item) },
-                    colors = CardDefaults.cardColors(containerColor = scheme.surfaceContainer),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                    modifier = Modifier.fillMaxWidth(0.86f),
+                    contentPadding = ListRowPadding,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(ListRowHeight),
                 ) {
                     Text(
                         text = item.name,
@@ -108,7 +104,7 @@ fun TrashScreen(vm: FileManagerViewModel) {
                 item(key = "emptyAll") {
                     Button(
                         onClick = { vm.emptyTrash() },
-                        modifier = Modifier.fillMaxWidth(0.7f),
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(text = "清空回收站", maxLines = 1)
                     }
@@ -117,7 +113,7 @@ fun TrashScreen(vm: FileManagerViewModel) {
                     Text(
                         text = "点按恢复 · 长按彻底删除",
                         style = MaterialTheme.typography.labelSmall,
-                        color = palette.muted,
+                        color = scheme.onSurfaceVariant,
                         maxLines = 2,
                     )
                 }
@@ -140,16 +136,14 @@ fun CollectionScreen(vm: FileManagerViewModel, type: CollectionType) {
     val recents = prefs.recents
     val favorites = prefs.favorites
 
-    ScreenScaffold(scrollState = state, edgeButton = {}) { _ ->
+    ScreenScaffold(scrollState = state, edgeButton = {}) { padding ->
         ScalingLazyColumn(
             state = state,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = 6.dp, bottom = 44.dp),
-            autoCentering = null,
+            contentPadding = padding,
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            item(key = "gap") { ClockGap(26.dp) }
             item(key = "title") { SectionHeader(type.title) }
 
             when (type) {
@@ -159,27 +153,17 @@ fun CollectionScreen(vm: FileManagerViewModel, type: CollectionType) {
                     }
                     items(recents.size, key = { recents[it].uri }) { index ->
                         val item = recents[index]
+                        val entry = FileEntry.of(
+                            uri = android.net.Uri.parse(item.uri),
+                            name = item.name,
+                            isDirectory = item.isDirectory,
+                            size = 0L,
+                            lastModified = item.openedAt,
+                            mimeType = null,
+                        )
                         FileCard(
-                            entry = FileEntry.of(
-                                uri = android.net.Uri.parse(item.uri),
-                                name = item.name,
-                                isDirectory = item.isDirectory,
-                                size = 0L,
-                                lastModified = item.openedAt,
-                                mimeType = null,
-                            ),
-                            onClick = {
-                                vm.openEntryAnywhere(
-                                    FileEntry.of(
-                                        uri = android.net.Uri.parse(item.uri),
-                                        name = item.name,
-                                        isDirectory = item.isDirectory,
-                                        size = 0L,
-                                        lastModified = item.openedAt,
-                                        mimeType = null,
-                                    ),
-                                )
-                            },
+                            entry = entry,
+                            onClick = { vm.openEntryAnywhere(entry) },
                             secondary = formatRelativeTime(item.openedAt),
                         )
                     }
@@ -193,28 +177,17 @@ fun CollectionScreen(vm: FileManagerViewModel, type: CollectionType) {
                     items(list.size, key = { list[it] }) { index ->
                         val uri = list[index]
                         val name = android.net.Uri.decode(uri).substringAfterLast('/').ifBlank { "已收藏项" }
-                        val kind = FileKind.of(name, null, false)
+                        val entry = FileEntry.of(
+                            uri = android.net.Uri.parse(uri),
+                            name = name,
+                            isDirectory = false,
+                            size = 0L,
+                            lastModified = 0L,
+                            mimeType = null,
+                        )
                         FileCard(
-                            entry = FileEntry.of(
-                                uri = android.net.Uri.parse(uri),
-                                name = name,
-                                isDirectory = false,
-                                size = 0L,
-                                lastModified = 0L,
-                                mimeType = null,
-                            ),
-                            onClick = {
-                                vm.openEntryAnywhere(
-                                    FileEntry.of(
-                                        uri = android.net.Uri.parse(uri),
-                                        name = name,
-                                        isDirectory = false,
-                                        size = 0L,
-                                        lastModified = 0L,
-                                        mimeType = null,
-                                    ),
-                                )
-                            },
+                            entry = entry,
+                            onClick = { vm.openEntryAnywhere(entry) },
                             secondary = "收藏",
                         )
                     }

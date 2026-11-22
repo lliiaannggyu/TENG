@@ -33,17 +33,17 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
+import androidx.wear.compose.material3.CompactButton
+import androidx.wear.compose.material3.FilledTonalButton
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import coil.compose.AsyncImage
@@ -52,11 +52,7 @@ import com.tengwear.tengfilemanager.core.model.FileKind
 import com.tengwear.tengfilemanager.core.util.formatBytes
 import com.tengwear.tengfilemanager.core.util.formatDuration
 import com.tengwear.tengfilemanager.presentation.FileManagerViewModel
-import com.tengwear.tengfilemanager.presentation.theme.LocalTengPalette
 import com.tengwear.tengfilemanager.presentation.ui.common.EmptyState
-import androidx.wear.compose.material3.CompactButton
-import androidx.wear.compose.material3.FilledTonalButton
-import androidx.wear.compose.material3.TextButton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -69,6 +65,8 @@ import kotlinx.coroutines.withContext
  *  · 音视频：只播放，不写回文件；
  *  · PDF：逐页渲染为位图，不依赖第三方库（PdfRenderer 是系统能力，零依赖）；
  *  · 压缩包 / 安装包：只读信息，写操作（解压/安装）必须回到显式按钮。
+ *
+ * 排版全部用 M3E 官方档位（最小 labelSmall），不再手填 7~9sp 的私设字号。
  */
 @Composable
 fun ViewerScreen(vm: FileManagerViewModel, entry: FileEntry, siblings: List<FileEntry>) {
@@ -116,8 +114,8 @@ private fun ImageViewer(entry: FileEntry) {
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 26.dp)
                 .widthIn(max = 150.dp),
-            fontSize = 8.sp,
-            color = LocalTengPalette.current.muted,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Center,
             maxLines = 2,
         )
@@ -130,7 +128,6 @@ private fun ImageViewer(entry: FileEntry) {
 @Composable
 private fun MediaViewer(entry: FileEntry, isVideo: Boolean) {
     val context = LocalContext.current
-    val palette = LocalTengPalette.current
     val player = remember(entry.key) {
         ExoPlayer.Builder(context).build().apply {
             setMediaItem(MediaItem.fromUri(entry.uri))
@@ -183,15 +180,15 @@ private fun MediaViewer(entry: FileEntry, isVideo: Boolean) {
             Text(
                 text = entry.name,
                 modifier = Modifier.widthIn(max = 156.dp),
-                fontSize = 11.sp,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onBackground,
                 textAlign = TextAlign.Center,
                 maxLines = 3,
             )
             Text(
                 text = "${formatDuration(position)} / ${formatDuration(duration)}",
-                fontSize = 9.sp,
-                color = palette.muted,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
             )
             Row(
@@ -227,7 +224,6 @@ private fun MediaViewer(entry: FileEntry, isVideo: Boolean) {
 
 @Composable
 private fun TextViewer(vm: FileManagerViewModel, entry: FileEntry) {
-    val palette = LocalTengPalette.current
     val text by produceState(initialValue = "读取中…", entry.key) {
         value = vm.readTextPreview(entry)
     }
@@ -238,15 +234,15 @@ private fun TextViewer(vm: FileManagerViewModel, entry: FileEntry) {
         state = state,
         modifier = Modifier
             .fillMaxSize()
-            .background(androidx.compose.ui.graphics.Color.Black),
+            .background(MaterialTheme.colorScheme.background),
         contentPadding = PaddingValues(vertical = 22.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         item(key = "head") {
             Text(
                 text = entry.name,
-                fontSize = 9.sp,
-                color = palette.muted,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.widthIn(max = 150.dp),
@@ -258,8 +254,7 @@ private fun TextViewer(vm: FileManagerViewModel, entry: FileEntry) {
                 modifier = Modifier
                     .fillMaxWidth(0.92f)
                     .padding(horizontal = 4.dp),
-                fontSize = 8.5.sp,
-                lineHeight = 11.sp,
+                style = MaterialTheme.typography.labelSmall,
                 fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onBackground,
                 maxLines = 3,
@@ -268,7 +263,11 @@ private fun TextViewer(vm: FileManagerViewModel, entry: FileEntry) {
         }
         if (lines.size > 400) {
             item(key = "more") {
-                Text(text = "… 仅显示前 400 行", fontSize = 8.sp, color = palette.muted)
+                Text(
+                    text = "… 仅显示前 400 行",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
@@ -278,7 +277,6 @@ private fun TextViewer(vm: FileManagerViewModel, entry: FileEntry) {
 
 @Composable
 private fun PdfViewer(vm: FileManagerViewModel, entry: FileEntry) {
-    val palette = LocalTengPalette.current
     val pfd = remember(entry.key) { vm.openFileDescriptor(entry.uri) }
     val renderer = remember(entry.key) { pfd?.let { runCatching { PdfRenderer(it) }.getOrNull() } }
     val pageCount = renderer?.pageCount ?: 0
@@ -328,15 +326,18 @@ private fun PdfViewer(vm: FileManagerViewModel, entry: FileEntry) {
                         contentScale = ContentScale.Fit,
                         modifier = Modifier.fillMaxWidth(0.9f),
                     )
-                } ?: Text(text = "渲染中…", fontSize = 9.sp, color = palette.muted)
+                } ?: Text(
+                    text = "渲染中…",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
         Text(
             text = "${pagerState.currentPage + 1} / $pageCount · 左右滑动翻页",
-            fontSize = 8.sp,
-            color = palette.muted,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 22.dp),
-            fontWeight = FontWeight.Normal,
         )
     }
 }

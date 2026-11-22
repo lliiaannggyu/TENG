@@ -1,14 +1,14 @@
 package com.tengwear.tengfilemanager.presentation.ui.lan
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -20,9 +20,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material3.Button
-import androidx.wear.compose.material3.CircularProgressIndicator
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
@@ -30,8 +27,7 @@ import androidx.wear.compose.material3.TextButton
 import com.tengwear.tengfilemanager.core.lan.LanTransfer
 import com.tengwear.tengfilemanager.core.util.formatBytes
 import com.tengwear.tengfilemanager.presentation.FileManagerViewModel
-import com.tengwear.tengfilemanager.presentation.theme.LocalTengPalette
-import com.tengwear.tengfilemanager.presentation.ui.common.ClockGap
+import com.tengwear.tengfilemanager.presentation.theme.LocalKindColors
 import com.tengwear.tengfilemanager.presentation.ui.common.EmptyState
 import com.tengwear.tengfilemanager.presentation.ui.common.MenuCard
 import com.tengwear.tengfilemanager.presentation.ui.common.SectionHeader
@@ -46,7 +42,7 @@ import com.tengwear.tengfilemanager.presentation.ui.common.SectionHeader
  */
 @Composable
 fun DevicesScreen(vm: FileManagerViewModel) {
-    val palette = LocalTengPalette.current
+    val kinds = LocalKindColors.current
     val scheme = MaterialTheme.colorScheme
     val peers by vm.peers.collectAsStateWithLifecycle()
     val lan by vm.lanState.collectAsStateWithLifecycle()
@@ -56,16 +52,14 @@ fun DevicesScreen(vm: FileManagerViewModel) {
 
     LaunchedEffect(Unit) { vm.startLan() }
 
-    ScreenScaffold(scrollState = state, edgeButton = {}) { _ ->
+    ScreenScaffold(scrollState = state, edgeButton = {}) { padding ->
         ScalingLazyColumn(
             state = state,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = 6.dp, bottom = 44.dp),
-            autoCentering = null,
+            contentPadding = padding,
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            item(key = "gap") { ClockGap(26.dp) }
             item(key = "title") { SectionHeader("附近设备") }
             item(key = "me") {
                 Text(
@@ -81,9 +75,7 @@ fun DevicesScreen(vm: FileManagerViewModel) {
             lan.pending?.let { request ->
                 item(key = "pending") {
                     Column(
-                        modifier = Modifier
-                            .fillMaxWidth(0.9f)
-                            .padding(vertical = 4.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
@@ -109,7 +101,7 @@ fun DevicesScreen(vm: FileManagerViewModel) {
                         Text(
                             text = "请与对方屏幕上的数字核对",
                             style = MaterialTheme.typography.labelSmall,
-                            color = palette.muted,
+                            color = scheme.onSurfaceVariant,
                             maxLines = 1,
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -136,7 +128,7 @@ fun DevicesScreen(vm: FileManagerViewModel) {
                     icon = Icons.AutoMirrored.Filled.Send,
                     title = peer.name,
                     subtitle = "${peer.host.hostAddress}:${peer.port}",
-                    accent = palette.video,
+                    accent = kinds.video,
                 ) { vm.sendTo(peer) }
             }
 
@@ -144,7 +136,7 @@ fun DevicesScreen(vm: FileManagerViewModel) {
                 Text(
                     text = "仅局域网直连，文件不经过服务器；接收前需本机确认。",
                     style = MaterialTheme.typography.labelSmall,
-                    color = palette.muted.copy(alpha = 0.8f),
+                    color = scheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .widthIn(max = 160.dp)
@@ -163,133 +155,131 @@ fun DevicesScreen(vm: FileManagerViewModel) {
 /**
  * 传输进度页。
  *
- * 大文件传输必须能锁住用户预期：M3E [CircularProgressIndicator] + 当前文件 + 已传/总量 + 取消。
+ * 大文件传输必须能锁住用户预期：M3E CircularProgressIndicator + 当前文件 + 已传/总量 + 取消。
  * 传输由前台服务保活，所以即使息屏、退出这一页，传输也不会中断。
  */
 @Composable
 fun TransferScreen(vm: FileManagerViewModel) {
-    val palette = LocalTengPalette.current
+    val kinds = LocalKindColors.current
     val scheme = MaterialTheme.colorScheme
     val lan by vm.lanState.collectAsStateWithLifecycle()
     val state = rememberScalingLazyListState()
 
-    ScreenScaffold(scrollState = state, edgeButton = {}) { _ ->
-            ScalingLazyColumn(
-                state = state,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(top = 6.dp, bottom = 44.dp),
-                autoCentering = null,
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                item(key = "gap") { ClockGap(26.dp) }
-                item(key = "phase") {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ScreenScaffold(scrollState = state, edgeButton = {}) { padding ->
+        ScalingLazyColumn(
+            state = state,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = padding,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            item(key = "phase") {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(
+                        text = when (lan.phase) {
+                            LanTransfer.Phase.IDLE -> "空闲"
+                            LanTransfer.Phase.LISTENING -> "等待连接"
+                            LanTransfer.Phase.CONNECTING -> "连接中"
+                            LanTransfer.Phase.WAITING_ACCEPT -> "等待对方确认"
+                            LanTransfer.Phase.TRANSFERRING ->
+                                if (lan.direction == LanTransfer.Direction.SEND) "发送中" else "接收中"
+                            LanTransfer.Phase.VERIFYING -> "校验中"
+                            LanTransfer.Phase.DONE -> "完成"
+                            LanTransfer.Phase.FAILED -> "失败"
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                        color = scheme.onSurface,
+                    )
+                    if (lan.peerName.isNotBlank()) {
+                        Text(
+                            text = lan.peerName,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = scheme.onSurfaceVariant,
+                            maxLines = 1,
+                        )
+                    }
+                    if (lan.phase == LanTransfer.Phase.TRANSFERRING ||
+                        lan.phase == LanTransfer.Phase.VERIFYING
                     ) {
                         Text(
-                            text = when (lan.phase) {
-                                LanTransfer.Phase.IDLE -> "空闲"
-                                LanTransfer.Phase.LISTENING -> "等待连接"
-                                LanTransfer.Phase.CONNECTING -> "连接中"
-                                LanTransfer.Phase.WAITING_ACCEPT -> "等待对方确认"
-                                LanTransfer.Phase.TRANSFERRING ->
-                                    if (lan.direction == LanTransfer.Direction.SEND) "发送中" else "接收中"
-                                LanTransfer.Phase.VERIFYING -> "校验中"
-                                LanTransfer.Phase.DONE -> "完成"
-                                LanTransfer.Phase.FAILED -> "失败"
-                            },
-                            style = MaterialTheme.typography.titleMedium,
-                            color = scheme.onSurface,
-                        )
-                        if (lan.peerName.isNotBlank()) {
-                            Text(
-                                text = lan.peerName,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = palette.muted,
-                                maxLines = 1,
-                            )
-                        }
-                        if (lan.phase == LanTransfer.Phase.TRANSFERRING ||
-                            lan.phase == LanTransfer.Phase.VERIFYING
-                        ) {
-                            Text(
-                                text = "${(lan.fraction * 100).toInt()}%",
-                                style = MaterialTheme.typography.displaySmall,
-                                color = scheme.primary,
-                                maxLines = 1,
-                            )
-                        }
-                    }
-                }
-
-                if (lan.currentFile.isNotBlank()) {
-                    item(key = "file") {
-                        Text(
-                            text = lan.currentFile,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = palette.muted,
-                            maxLines = 1,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.widthIn(max = 150.dp),
-                        )
-                    }
-                }
-
-                if (lan.bytesTotal > 0) {
-                    item(key = "bytes") {
-                        Text(
-                            text = "${formatBytes(lan.bytesDone)} / ${formatBytes(lan.bytesTotal)}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = palette.muted,
+                            text = "${(lan.fraction * 100).toInt()}%",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = scheme.primary,
                             maxLines = 1,
                         )
                     }
                 }
+            }
 
-                if (lan.message.isNotBlank()) {
-                    item(key = "message") {
-                        Text(
-                            text = lan.message,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = if (lan.phase == LanTransfer.Phase.FAILED) {
-                                palette.danger
-                            } else {
-                                palette.success
-                            },
-                            textAlign = TextAlign.Center,
-                            maxLines = 3,
-                            modifier = Modifier.widthIn(max = 156.dp),
-                        )
-                    }
+            if (lan.currentFile.isNotBlank()) {
+                item(key = "file") {
+                    Text(
+                        text = lan.currentFile,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = scheme.onSurfaceVariant,
+                        maxLines = 1,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.widthIn(max = 150.dp),
+                    )
                 }
+            }
 
-                item(key = "actions") {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (lan.phase == LanTransfer.Phase.TRANSFERRING ||
-                            lan.phase == LanTransfer.Phase.CONNECTING ||
-                            lan.phase == LanTransfer.Phase.VERIFYING
-                        ) {
-                            TextButton(onClick = { vm.cancelTransfer() }) {
-                                Text(text = "取消传输", maxLines = 1)
-                            }
+            if (lan.bytesTotal > 0) {
+                item(key = "bytes") {
+                    Text(
+                        text = "${formatBytes(lan.bytesDone)} / ${formatBytes(lan.bytesTotal)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = scheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
+                }
+            }
+
+            if (lan.message.isNotBlank()) {
+                item(key = "message") {
+                    Text(
+                        text = lan.message,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (lan.phase == LanTransfer.Phase.FAILED) {
+                            scheme.error
+                        } else {
+                            kinds.success
+                        },
+                        textAlign = TextAlign.Center,
+                        maxLines = 3,
+                        modifier = Modifier.widthIn(max = 156.dp),
+                    )
+                }
+            }
+
+            item(key = "actions") {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (lan.phase == LanTransfer.Phase.TRANSFERRING ||
+                        lan.phase == LanTransfer.Phase.CONNECTING ||
+                        lan.phase == LanTransfer.Phase.VERIFYING
+                    ) {
+                        TextButton(onClick = { vm.cancelTransfer() }) {
+                            Text(text = "取消传输", maxLines = 1)
                         }
-                        if (lan.phase == LanTransfer.Phase.DONE || lan.phase == LanTransfer.Phase.FAILED) {
-                            Button(onClick = { vm.openLocationFromOverlay(vm.inboxLocation()) }) {
-                                Text(text = "查看接收目录", maxLines = 1)
-                            }
-                            TextButton(
-                                onClick = {
-                                    vm.resetTransfer()
-                                    vm.back()
-                                },
-                            ) {
-                                Text(text = "关闭", maxLines = 1)
-                            }
+                    }
+                    if (lan.phase == LanTransfer.Phase.DONE || lan.phase == LanTransfer.Phase.FAILED) {
+                        Button(onClick = { vm.openLocationFromOverlay(vm.inboxLocation()) }) {
+                            Text(text = "查看接收目录", maxLines = 1)
+                        }
+                        TextButton(
+                            onClick = {
+                                vm.resetTransfer()
+                                vm.back()
+                            },
+                        ) {
+                            Text(text = "关闭", maxLines = 1)
                         }
                     }
                 }
             }
         }
     }
+}

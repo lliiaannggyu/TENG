@@ -2,7 +2,6 @@ package com.tengwear.tengfilemanager.presentation.ui.search
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -20,7 +19,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
@@ -30,7 +28,6 @@ import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import com.tengwear.tengfilemanager.core.util.formatBytes
 import com.tengwear.tengfilemanager.presentation.FileManagerViewModel
-import com.tengwear.tengfilemanager.presentation.ui.common.ClockGap
 import com.tengwear.tengfilemanager.presentation.ui.common.EmptyState
 import com.tengwear.tengfilemanager.presentation.ui.common.FileCard
 import com.tengwear.tengfilemanager.presentation.ui.common.SectionHeader
@@ -56,16 +53,14 @@ fun SearchScreen(vm: FileManagerViewModel) {
 
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
 
-    ScreenScaffold(scrollState = state, edgeButton = {}) { _ ->
+    ScreenScaffold(scrollState = state, edgeButton = {}) { padding ->
         ScalingLazyColumn(
             state = state,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = 6.dp, bottom = 44.dp),
-            autoCentering = null,
+            contentPadding = padding,
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            item(key = "gap") { ClockGap(26.dp) }
             item(key = "title") { SectionHeader("搜索") }
 
             item(key = "field") {
@@ -79,7 +74,7 @@ fun SearchScreen(vm: FileManagerViewModel) {
                     textStyle = MaterialTheme.typography.bodyMedium.copy(color = scheme.onSurface),
                     cursorBrush = SolidColor(scheme.primary),
                     modifier = Modifier
-                        .fillMaxWidth(0.86f)
+                        .fillMaxWidth()
                         .focusRequester(focus)
                         .clip(RoundedCornerShape(50))
                         .background(scheme.surfaceContainer)

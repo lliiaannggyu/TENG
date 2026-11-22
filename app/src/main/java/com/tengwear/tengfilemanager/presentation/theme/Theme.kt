@@ -2,8 +2,8 @@ package com.tengwear.tengfilemanager.presentation.theme
 
 import android.content.Context
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
@@ -14,6 +14,7 @@ import androidx.wear.compose.material3.dynamicColorScheme
 import com.tengwear.tengfilemanager.core.model.FileKind
 import com.tengwear.tengfilemanager.core.theme.SeedPalettes
 import com.tengwear.tengfilemanager.core.theme.SeedTheme
+import com.tengwear.tengfilemanager.core.theme.TonalPalette
 
 /**
  * 配色。
@@ -25,7 +26,7 @@ import com.tengwear.tengfilemanager.core.theme.SeedTheme
  * 颜色全部来自 Material 3 的 **tone 体系**而不是手挑的十六进制值：
  *  · [SeedTheme.SYSTEM] 用 `dynamicColorScheme(context)`，即安卓 Material You
  *    从壁纸生成的官方色阶（Google 官方 HCT 算法，零近似）；
- *  · 其余种子色由 `TonalPalette` 按 tone 推导，彩度分配沿用 Material 3 的比例关系
+ *  · 其余种子色由 [TonalPalette] 按 tone 推导，彩度分配沿用 Material 3 的比例关系
  *    （主色阶保留种子彩度，次级约 1/3，三级再降一档，中性接近灰）。
  *
  * tone 映射用的是 Material 3 深色方案的对应关系：
@@ -69,29 +70,32 @@ private fun darkSchemeFrom(p: SeedPalettes): ColorScheme = ColorScheme(
 )
 
 /**
- * 语义色板。Wear M3 的 colorScheme 槽位有限，文件类型需要 8 种可区分色，
- * 硬塞进 primary/secondary/tertiary 会让主题语义崩塌，所以单独维护一份。
+ * 文件类型功能色与语义强调色。
  *
- * 这 8 个色**不随种子色变**：文件类型的可辨识度比"跟着主题走"更重要，
- * 用户换主题色时不应该认不出哪个是压缩包。
+ * Wear M3 的 colorScheme 槽位有限，文件类型需要 8 种可区分色，硬塞进
+ * primary/secondary/tertiary 会让主题语义崩塌，所以单独维护一份。
+ *
+ * 这些颜色**不使用手挑的十六进制值**：每一种都由官方 HCT 算法
+ * （[TonalPalette.fromSeed]）从 Google 官方品牌种子色在 tone 75 推导——
+ * tone 75 在深色背景上的对比度达到 M3 无障碍要求。它们不随主题种子色变：
+ * 文件类型的可辨识度比"跟着主题走"更重要，用户换主题色时
+ * 不应该认不出哪个是压缩包。
+ *
+ * 语义色中的"危险"不在这里：删除等破坏性操作一律用官方槽位
+ * `MaterialTheme.colorScheme.error`。
  */
 @Immutable
-data class TengPalette(
-    val card: Color = Color(0xFF171D23),
-    val cardHighlight: Color = Color(0xFF1F2A32),
-    val divider: Color = Color(0xFF2A343C),
-    val muted: Color = Color(0xFF93A2AE),
-    val danger: Color = Color(0xFFFF6B6B),
-    val success: Color = Color(0xFF6BD98A),
-    val warning: Color = Color(0xFFFFC66B),
-    val folder: Color = Color(0xFFFFC66B),
-    val image: Color = Color(0xFF5FD6BE),
-    val video: Color = Color(0xFFB69CFF),
-    val audio: Color = Color(0xFFFF9AC4),
-    val document: Color = Color(0xFF7FB6FF),
-    val archive: Color = Color(0xFFFFA45C),
-    val apk: Color = Color(0xFF8BE07A),
-    val other: Color = Color(0xFF93A2AE),
+data class KindColors(
+    val folder: Color = brand(0xFFF9AB00L),   // Google 黄
+    val image: Color = brand(0xFF12B5CBL),    // Google 青
+    val video: Color = brand(0xFFA142F4L),    // Google 紫
+    val audio: Color = brand(0xFFF43FA9L),    // Material 粉
+    val document: Color = brand(0xFF1A73E8L), // Google 蓝
+    val archive: Color = brand(0xFFE8710AL),  // Google 橙
+    val apk: Color = brand(0xFF34A853L),      // Google 绿
+    val other: Color = brand(0xFF9AA0A6L),    // Google 灰
+    val success: Color = brand(0xFF34A853L),  // Google 绿
+    val warning: Color = brand(0xFFF9AB00L),  // Google 黄
 ) {
     fun of(kind: FileKind): Color = when (kind) {
         FileKind.FOLDER -> folder
@@ -105,7 +109,13 @@ data class TengPalette(
     }
 }
 
-val LocalTengPalette = staticCompositionLocalOf { TengPalette() }
+/** 从官方品牌种子色按 HCT 算法取 tone 75（深色背景下的高对比档）。 */
+private fun brand(seedArgb: Long): Color = Color(TonalPalette.fromSeed(seedArgb).tone(75))
+
+/** HCT 推导有计算成本，默认实例只算一次。 */
+private val DefaultKindColors by lazy { KindColors() }
+
+val LocalKindColors = staticCompositionLocalOf { DefaultKindColors }
 
 @Composable
 fun TENG文件管理器Theme(
@@ -114,7 +124,7 @@ fun TENG文件管理器Theme(
 ) {
     val context = LocalContext.current
     val scheme = buildScheme(seed, context)
-    CompositionLocalProvider(LocalTengPalette provides TengPalette()) {
+    CompositionLocalProvider(LocalKindColors provides DefaultKindColors) {
         MaterialTheme(colorScheme = scheme, content = content)
     }
 }

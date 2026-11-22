@@ -3,19 +3,15 @@ package com.tengwear.tengfilemanager.presentation.ui.home
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.runtime.Composable
@@ -28,35 +24,30 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material3.Card
-import androidx.wear.compose.material3.CardDefaults
 import androidx.wear.compose.material3.LinearProgressIndicator
 import androidx.wear.compose.material3.MaterialTheme
-import androidx.wear.compose.material3.ProgressIndicatorDefaults
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import com.tengwear.tengfilemanager.core.util.formatBytes
 import com.tengwear.tengfilemanager.presentation.CollectionType
 import com.tengwear.tengfilemanager.presentation.FileManagerViewModel
 import com.tengwear.tengfilemanager.presentation.Screen
-import com.tengwear.tengfilemanager.presentation.theme.LocalTengPalette
-import com.tengwear.tengfilemanager.presentation.ui.common.ClockGap
+import com.tengwear.tengfilemanager.presentation.theme.LocalKindColors
+import com.tengwear.tengfilemanager.presentation.ui.common.ListRowHeight
+import com.tengwear.tengfilemanager.presentation.ui.common.ListRowPadding
 import com.tengwear.tengfilemanager.presentation.ui.common.MenuCard
 
 /**
  * 首页。
  *
  * 全部由官方 M3E 组件搭成：骨架是 [ScreenScaffold]（时钟槽、滚动指示器、底部边缘按钮位），
- * 列表是 `ScalingLazyColumn`，每一行是 M3E [Card]。
- * 时钟由外层的 `AppScaffold` 统一提供，这里不再自己画——重复声明会和列表内容重叠。
- *
- * 相比自绘版本去掉了三样东西：
- *  · 背景的 264° 存储进度环 —— 换成卡片里一条 [LinearProgressIndicator]；
- *  · 顶部的 "TENG 文件" 文字 —— 时钟本身就是最合适的顶部标题；
- *  · 自绘胶囊行（Box + background + clickable）—— 换成 M3E Card。
+ * 列表是 `ScalingLazyColumn`（默认自动居中，官方弧形缩放），每一行是 M3E `Card`
+ * 的官方默认度量。时钟由外层 `AppScaffold` 统一提供，列表避让时钟用的是
+ * `ScreenScaffold` 交给 content 的 contentPadding——那是官方避让机制。
  */
 @Composable
 fun HomeScreen(vm: FileManagerViewModel) {
-    val palette = LocalTengPalette.current
+    val kinds = LocalKindColors.current
     val scheme = MaterialTheme.colorScheme
     val volume by vm.volume.collectAsStateWithLifecycle()
     val roots by vm.roots.collectAsStateWithLifecycle()
@@ -71,31 +62,22 @@ fun HomeScreen(vm: FileManagerViewModel) {
         ScalingLazyColumn(
             state = state,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = 6.dp, bottom = 44.dp),
-            // 关掉自动居中：否则首次滚动会把第一项重新拽到屏幕中心，视觉上跳一下；
-            // 同时它还会把 contentPadding.top 抵消掉（实测 46dp 与 120dp 渲染完全相同）。
-            autoCentering = null,
+            contentPadding = padding,
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            // 给顶部时钟带让位的真实占位项（contentPadding.top 会被锚定逻辑抵消）
-            item(key = "clockGap") { ClockGap(30.dp) }
-
             item(key = "storage") {
                 Card(
                     onClick = { vm.openLocation(roots.firstOrNull() ?: return@Card) },
                     enabled = roots.isNotEmpty(),
-                    colors = CardDefaults.cardColors(containerColor = scheme.surfaceContainer),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                    contentPadding = ListRowPadding,
                     modifier = Modifier
-                        .fillMaxWidth(0.86f)
-                        // 存储卡有两行内容（文字行 + 进度条），不能像菜单行那样
-                        // 强制 height()——会把进度条裁掉。用 heightIn 保留下限即可。
-                        .heightIn(min = 52.dp),
+                        .fillMaxWidth()
+                        .height(ListRowHeight),
                 ) {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(5.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         Box(modifier = Modifier.fillMaxWidth()) {
                             Text(
@@ -116,12 +98,9 @@ fun HomeScreen(vm: FileManagerViewModel) {
                                 modifier = Modifier.align(Alignment.CenterEnd),
                             )
                         }
+                        // 官方默认配色：primary 指示条 + 默认轨道色
                         LinearProgressIndicator(
                             progress = { ratio },
-                            colors = ProgressIndicatorDefaults.colors(
-                                indicatorColor = palette.document,
-                                trackColor = scheme.surfaceContainerHigh,
-                            ),
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -133,7 +112,7 @@ fun HomeScreen(vm: FileManagerViewModel) {
                     icon = Icons.AutoMirrored.Filled.List,
                     title = "浏览文件",
                     subtitle = roots.firstOrNull()?.name ?: "应用内部存储",
-                    accent = palette.folder,
+                    accent = kinds.folder,
                 ) { roots.firstOrNull()?.let { vm.openLocation(it) } }
             }
 
@@ -142,7 +121,7 @@ fun HomeScreen(vm: FileManagerViewModel) {
                     icon = Icons.Filled.DateRange,
                     title = "最近",
                     subtitle = "刚打开过的文件",
-                    accent = palette.document,
+                    accent = kinds.document,
                 ) { vm.navigate(Screen.Collection(CollectionType.RECENTS)) }
             }
 
@@ -151,7 +130,7 @@ fun HomeScreen(vm: FileManagerViewModel) {
                     icon = Icons.Filled.Star,
                     title = "收藏",
                     subtitle = "常用文件与目录",
-                    accent = palette.warning,
+                    accent = kinds.warning,
                 ) { vm.navigate(Screen.Collection(CollectionType.FAVORITES)) }
             }
 
@@ -160,7 +139,7 @@ fun HomeScreen(vm: FileManagerViewModel) {
                     icon = Icons.Filled.Search,
                     title = "搜索",
                     subtitle = "按名称查找",
-                    accent = palette.image,
+                    accent = kinds.image,
                 ) { vm.navigate(Screen.Search) }
             }
 
@@ -169,7 +148,7 @@ fun HomeScreen(vm: FileManagerViewModel) {
                     icon = Icons.AutoMirrored.Filled.Send,
                     title = "设备",
                     subtitle = "局域网互传",
-                    accent = palette.video,
+                    accent = kinds.video,
                 ) { vm.navigate(Screen.Devices) }
             }
 
@@ -178,7 +157,7 @@ fun HomeScreen(vm: FileManagerViewModel) {
                     icon = Icons.Filled.Delete,
                     title = "回收站",
                     subtitle = if (trashItems.isEmpty()) "空" else "${trashItems.size} 项可恢复",
-                    accent = palette.danger,
+                    accent = scheme.error,
                 ) {
                     vm.loadTrash()
                     vm.navigate(Screen.Trash)
@@ -190,7 +169,7 @@ fun HomeScreen(vm: FileManagerViewModel) {
                     icon = Icons.Filled.Settings,
                     title = "设置",
                     subtitle = "排序偏好 / 设备名",
-                    accent = palette.muted,
+                    accent = scheme.onSurfaceVariant,
                 ) { vm.navigate(Screen.Settings) }
             }
         }

@@ -2,13 +2,24 @@ package com.tengwear.tengfilemanager.presentation.ui.sheet
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Create
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,27 +29,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material3.Button
+import androidx.wear.compose.material3.ButtonGroup
 import androidx.wear.compose.material3.CompactButton
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Create
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.Add
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.RadioButton
 import androidx.wear.compose.material3.ScreenScaffold
@@ -52,28 +49,27 @@ import com.tengwear.tengfilemanager.core.model.SortKey
 import com.tengwear.tengfilemanager.core.util.formatBytes
 import com.tengwear.tengfilemanager.presentation.FileManagerViewModel
 import com.tengwear.tengfilemanager.presentation.Screen
-import com.tengwear.tengfilemanager.presentation.theme.LocalTengPalette
-import com.tengwear.tengfilemanager.presentation.ui.common.ClockGap
+import com.tengwear.tengfilemanager.presentation.theme.LocalKindColors
 import com.tengwear.tengfilemanager.presentation.ui.common.MenuCard
 import com.tengwear.tengfilemanager.presentation.ui.common.SectionHeader
 
 private enum class CreateMode { FOLDER, FILE }
 
 /**
- * 快捷菜单（底部边缘上滑打开）。
+ * 快捷菜单（浏览页底部边缘按钮打开）。
  *
  * 它不是"设置页"，而是**当前上下文的最短操作路径**：
  *  · 有剪贴板内容时，"粘贴"永远排在第一位；
  *  · 处于选择态时，整页换成批量操作（复制/剪切/删除/压缩/分享/发送）；
  *  · 排序/筛选/路径/位置都在这里，不需要用户回首页绕一圈。
  *
- * 全部用官方 M3E 组件：动作是 [MenuCard]（Card），排序是 [RadioButton]，
- * 筛选是 [TextToggleButton]（官方 chip），新建/打开是 [Button]。
- * 不做 BottomSheet：圆屏上弹层高度一旦超过 60%，顶部的弧形留白会被切掉。
+ * 全部用官方 M3E 组件：动作是 [MenuCard]（官方默认度量的 Card），排序是 [RadioButton]，
+ * 筛选是 [TextToggleButton]（官方 toggle chip）装进官方 [ButtonGroup]
+ * （官方指南：一组不超过 3 个按钮），新建/打开是 [Button]。
  */
 @Composable
 fun QuickMenuScreen(vm: FileManagerViewModel) {
-    val palette = LocalTengPalette.current
+    val kinds = LocalKindColors.current
     val scheme = MaterialTheme.colorScheme
     val browse by vm.browse.collectAsStateWithLifecycle()
     val clipboard by vm.clipboard.collectAsStateWithLifecycle()
@@ -91,16 +87,14 @@ fun QuickMenuScreen(vm: FileManagerViewModel) {
         vm.back()
     }
 
-    ScreenScaffold(scrollState = state, edgeButton = {}) { _ ->
+    ScreenScaffold(scrollState = state, edgeButton = {}) { padding ->
         ScalingLazyColumn(
             state = state,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = 6.dp, bottom = 44.dp),
-            autoCentering = null,
+            contentPadding = padding,
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            item(key = "gap") { ClockGap(26.dp) }
             item(key = "title") {
                 SectionHeader(
                     if (selection.active) "已选 ${selection.count} 项" else (browse.location?.name ?: "菜单"),
@@ -117,7 +111,7 @@ fun QuickMenuScreen(vm: FileManagerViewModel) {
                         textStyle = MaterialTheme.typography.bodyMedium.copy(color = scheme.onSurface),
                         cursorBrush = SolidColor(scheme.primary),
                         modifier = Modifier
-                            .fillMaxWidth(0.86f)
+                            .fillMaxWidth()
                             .clip(RoundedCornerShape(50))
                             .background(scheme.surfaceContainer)
                             .padding(horizontal = 14.dp, vertical = 9.dp),
@@ -160,7 +154,7 @@ fun QuickMenuScreen(vm: FileManagerViewModel) {
                         icon = R.drawable.ic_content_copy,
                         title = "复制",
                         subtitle = "${selected.size} 项",
-                        accent = palette.document,
+                        accent = kinds.document,
                     ) { closeWith { vm.copySelection(cut = false) } }
                 }
                 item(key = "cut") {
@@ -168,7 +162,7 @@ fun QuickMenuScreen(vm: FileManagerViewModel) {
                         icon = R.drawable.ic_content_cut,
                         title = "剪切",
                         subtitle = "移动后原位置不再保留",
-                        accent = palette.warning,
+                        accent = kinds.warning,
                     ) { closeWith { vm.copySelection(cut = true) } }
                 }
                 item(key = "delete") {
@@ -176,7 +170,7 @@ fun QuickMenuScreen(vm: FileManagerViewModel) {
                         icon = Icons.Filled.Delete,
                         title = "删除",
                         subtitle = "移到回收站，可恢复",
-                        accent = palette.danger,
+                        accent = scheme.error,
                     ) { closeWith { vm.requestDelete(selected) } }
                 }
                 if (selected.size == 1) {
@@ -185,7 +179,7 @@ fun QuickMenuScreen(vm: FileManagerViewModel) {
                             icon = Icons.Filled.Edit,
                             title = "重命名",
                             subtitle = selected.first().name,
-                            accent = palette.muted,
+                            accent = scheme.onSurfaceVariant,
                         ) { closeWith { vm.requestRename(selected.first()) } }
                     }
                 }
@@ -194,7 +188,7 @@ fun QuickMenuScreen(vm: FileManagerViewModel) {
                         icon = R.drawable.ic_kind_archive,
                         title = "压缩为 ZIP",
                         subtitle = "支持加密，稍后可在详情中设置",
-                        accent = palette.archive,
+                        accent = kinds.archive,
                     ) { closeWith { vm.requestCompress(selected) } }
                 }
                 item(key = "share") {
@@ -202,7 +196,7 @@ fun QuickMenuScreen(vm: FileManagerViewModel) {
                         icon = Icons.Filled.Share,
                         title = "分享到其他应用",
                         subtitle = null,
-                        accent = palette.image,
+                        accent = kinds.image,
                     ) { closeWith { vm.share(selected) } }
                 }
                 item(key = "send") {
@@ -210,7 +204,7 @@ fun QuickMenuScreen(vm: FileManagerViewModel) {
                         icon = Icons.AutoMirrored.Filled.Send,
                         title = "发送到附近设备",
                         subtitle = "局域网直连",
-                        accent = palette.video,
+                        accent = kinds.video,
                     ) { closeWith { vm.navigate(Screen.Devices) } }
                 }
                 item(key = "all") {
@@ -218,7 +212,7 @@ fun QuickMenuScreen(vm: FileManagerViewModel) {
                         icon = Icons.Filled.Done,
                         title = "全选",
                         subtitle = "共 ${browse.entries.size} 项",
-                        accent = palette.muted,
+                        accent = scheme.onSurfaceVariant,
                     ) { vm.selectAll() }
                 }
                 item(key = "exit") {
@@ -226,7 +220,7 @@ fun QuickMenuScreen(vm: FileManagerViewModel) {
                         icon = Icons.Filled.Clear,
                         title = "退出选择",
                         subtitle = null,
-                        accent = palette.muted,
+                        accent = scheme.onSurfaceVariant,
                     ) { closeWith { vm.clearSelection() } }
                 }
                 return@ScalingLazyColumn
@@ -239,7 +233,7 @@ fun QuickMenuScreen(vm: FileManagerViewModel) {
                         icon = R.drawable.ic_content_paste,
                         title = "粘贴",
                         subtitle = "${if (clip.mode == ClipMode.CUT) "剪切" else "复制"} ${clip.count} 项 · ${formatBytes(clip.totalBytes)}",
-                        accent = palette.success,
+                        accent = kinds.success,
                     ) { closeWith { vm.paste() } }
                 }
             }
@@ -249,7 +243,7 @@ fun QuickMenuScreen(vm: FileManagerViewModel) {
                     icon = R.drawable.ic_kind_folder,
                     title = "新建文件夹",
                     subtitle = null,
-                    accent = palette.folder,
+                    accent = kinds.folder,
                 ) {
                     createMode = CreateMode.FOLDER
                     input = "新建文件夹"
@@ -260,7 +254,7 @@ fun QuickMenuScreen(vm: FileManagerViewModel) {
                     icon = Icons.Filled.Create,
                     title = "新建文件",
                     subtitle = null,
-                    accent = palette.document,
+                    accent = kinds.document,
                 ) {
                     createMode = CreateMode.FILE
                     input = "新建文件.txt"
@@ -273,7 +267,7 @@ fun QuickMenuScreen(vm: FileManagerViewModel) {
                     RadioButton(
                         selected = browse.sort.key == key,
                         onSelect = { vm.setSortKey(key) },
-                        modifier = Modifier.fillMaxWidth(0.86f),
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(
                             text = key.label,
@@ -301,18 +295,15 @@ fun QuickMenuScreen(vm: FileManagerViewModel) {
                 KindFilter.ALL, KindFilter.IMAGE, KindFilter.VIDEO, KindFilter.AUDIO,
                 KindFilter.DOCUMENT, KindFilter.ARCHIVE, KindFilter.APK,
             )
-            // 一行 3 个：7 个筛选项排成 3/3/1，比一行 2 个少滚一屏。
-            // 圆屏上每个 chip 约 44dp，3 个加间距约 144dp，在 0.86 宽度（195dp）内放得下。
+            // 官方 ButtonGroup（指南：一组 ≤3 个）：7 个筛选项排成 3/3/1
             items(filters.chunked(3).size, key = { "frow_$it" }) { rowIndex ->
                 val row = filters.chunked(3)[rowIndex]
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+                ButtonGroup(modifier = Modifier.fillMaxWidth()) {
                     row.forEach { filter ->
                         TextToggleButton(
                             checked = browse.filter == filter,
                             onCheckedChange = { vm.setFilter(filter) },
+                            modifier = Modifier.weight(1f),
                         ) {
                             Text(
                                 text = filter.label,
@@ -329,7 +320,7 @@ fun QuickMenuScreen(vm: FileManagerViewModel) {
                     icon = Icons.Filled.Place,
                     title = "输入路径",
                     subtitle = "精确跳转 / 访问已授权目录",
-                    accent = palette.muted,
+                    accent = scheme.onSurfaceVariant,
                 ) { closeWith { vm.navigate(Screen.PathInput) } }
             }
 
@@ -340,7 +331,7 @@ fun QuickMenuScreen(vm: FileManagerViewModel) {
                     icon = Icons.AutoMirrored.Filled.List,
                     title = location.name,
                     subtitle = null,
-                    accent = palette.folder,
+                    accent = kinds.folder,
                 ) { closeWith { vm.openLocationFromOverlay(location) } }
             }
 
@@ -349,7 +340,7 @@ fun QuickMenuScreen(vm: FileManagerViewModel) {
                     icon = Icons.Filled.Refresh,
                     title = "刷新目录",
                     subtitle = null,
-                    accent = palette.muted,
+                    accent = scheme.onSurfaceVariant,
                 ) { closeWith { vm.refresh() } }
             }
             item(key = "settings") {
@@ -357,7 +348,7 @@ fun QuickMenuScreen(vm: FileManagerViewModel) {
                     icon = Icons.Filled.Settings,
                     title = "设置",
                     subtitle = null,
-                    accent = palette.muted,
+                    accent = scheme.onSurfaceVariant,
                 ) { closeWith { vm.navigate(Screen.Settings) } }
             }
         }
