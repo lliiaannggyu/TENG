@@ -3,6 +3,8 @@
 圆形表盘上的文件管理器：浏览、筛选、排序、多选、复制/剪切/粘贴、重命名、删除（进回收站）、
 压缩/解压（ZIP / 7z）、分享、局域网互传、常见格式查看器、安装包校验与安装。
 
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
+
 > 完整设计（几何规范、交互契约、性能预算、权限合规、协议时序、待确认项决议）见
 > [`docs/架构与交互设计.md`](docs/架构与交互设计.md)。
 
@@ -54,3 +56,38 @@ docs/架构与交互设计.md
 1. 7z **加密创建**、7z 分卷合并解压未支持（有明确 UI 提示）。
 2. 局域网传输为明文直连（同 Wi-Fi），配对靠 4 位码人工比对；TLS/ECDH 见文档「后续演进」。
 3. 文件夹不直传，需先压缩。
+
+## 开源协议
+
+本项目采用 [GNU AGPL v3](LICENSE) 开源协议。
+
+AGPL v3 是基于 GPL v3 的强传染性开源协议，额外增加了第 13 条：**如果你修改了本程序并通过网络向用户提供服务，必须向所有用户公开你的修改版完整源代码。**
+
+简单说：
+
+- 你可以自由使用、修改、分发本项目
+- 修改后的代码必须同样以 AGPL v3 开源
+- 即使你只是通过网络提供服务（不分发二进制），也必须开源你的修改
+
+## 构建与安装
+
+```bash
+# Debug 构建
+./gradlew :app:assembleDebug
+
+# Release 构建（需要配置签名密钥）
+# 在 local.properties 中添加：
+# release.storeFile=release-key.jks
+# release.storePassword=******
+# release.keyAlias=tengwear
+# release.keyPassword=******
+./gradlew :app:assembleRelease
+```
+
+构建产物位于 `app/build/outputs/apk/`。
+
+安装到 Wear OS 设备：
+
+```bash
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
