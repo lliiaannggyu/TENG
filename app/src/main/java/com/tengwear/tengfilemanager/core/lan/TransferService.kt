@@ -24,6 +24,9 @@ class TransferService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        // 通知渠道是 API 26+ 概念；API 25（Wear OS 2.0）走 NotificationCompat 的
+        // priority 兜底，不需要（也不能）创建渠道
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (manager.getNotificationChannel(CHANNEL_ID) == null) {
             manager.createNotificationChannel(

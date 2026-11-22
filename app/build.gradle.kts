@@ -15,7 +15,10 @@ android {
 
     defaultConfig {
         applicationId = "com.tengwear.tengfilemanager"
-        minSdk = 30
+        // 最低支持 Wear OS 2.x（API 25）。再往下会被 wear-compose-material3 的
+        // minSdk 25 卡死，这就是不牺牲任何功能/体验前提下的硬件下限。
+        // java.time 通过 coreLibraryDesugaring 在 API 25/26 上同样可用。
+        minSdk = 25
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -54,6 +57,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        // java.time 脱糖到 API 25/26，运行行为与 API 26+ 完全一致
+        isCoreLibraryDesugaringEnabled = true
     }
     useLibrary("wear-sdk")
     buildFeatures {
@@ -93,6 +98,9 @@ dependencies {
 
     // SAF
     implementation(libs.documentfile)
+
+    // java.time 等 API 的脱糖实现（minSdk 25 所需）
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     // 缩略图（图片 + 视频首帧）
     implementation(libs.coil.compose)
