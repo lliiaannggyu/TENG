@@ -32,7 +32,8 @@
         分享走 FileProvider 的临时授权，读文件走 SAF 授权，都不需要媒体库权限。
     -->
 
-    <uses-feature android:name="android.hardware.type.watch" />
+    <!-- 通用适配：手表特性声明为可选，普通 Android 设备（手机/全安卓手表）同样可安装使用 -->
+    <uses-feature android:name="android.hardware.type.watch" android:required="false" />
     <!-- 表冠为可选硬件：无表冠设备走「边缘滚动轨 + 翻页键」替代交互 -->
     <uses-feature android:name="android.hardware.rotary_encoder" android:required="false" />
 
@@ -57,9 +58,15 @@
         android:supportsRtl="true"
         android:theme="@android:style/Theme.DeviceDefault">
 
+        <!--
+            com.google.android.wearable 共享库已移除 required 声明：
+            全代码无任何该库的类引用（布局用 androidx.wear 的 BoxInsetLayout，随 APK 打包），
+            声明 required=true 会让非 Wear OS 的普通 Android 设备
+            报「安装包使用的共享库不存在」直接拒绝安装。
+        -->
         <uses-library
             android:name="com.google.android.wearable"
-            android:required="true" />
+            android:required="false" />
         <uses-library
             android:name="wear-sdk"
             android:required="false" />
