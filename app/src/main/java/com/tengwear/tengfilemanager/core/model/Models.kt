@@ -251,12 +251,17 @@ sealed interface UndoRecord {
     data class MoveBack(override val label: String, val moved: List<Pair<Uri, Uri>>) : UndoRecord
 }
 
-/** 位置（一个可浏览的目录）。SAF 的 treeUri 必须一路带着，否则无法构造子文档 Uri。 */
+/**
+ * 位置（一个可浏览的目录）。SAF 的 treeUri 必须一路带着，否则无法构造子文档 Uri。
+ * [isDeviceStorage] 表示这是设备共享存储根（/sdcard），需要「所有文件访问权限」；
+ * 与 [isSandbox] 区分开，UI 才不会把设备存储误标成「应用沙盒」。
+ */
 data class Location(
     val uri: Uri,
     val treeUri: Uri?,
     val name: String,
     val isSandbox: Boolean = false,
+    val isDeviceStorage: Boolean = false,
 ) {
     val id: String get() = uri.toString()
 }

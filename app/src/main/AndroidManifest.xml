@@ -1,16 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- ============ 基础 ============ -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
     <!--
-        文件访问策略（重要）：
-        本应用【不申请】 READ_EXTERNAL_STORAGE / WRITE_EXTERNAL_STORAGE / MANAGE_EXTERNAL_STORAGE。
-        默认可操作范围 = 应用沙盒 + 用户通过 SAF(ACTION_OPEN_DOCUMENT_TREE) 显式授权的目录。
-        理由见 docs/架构与交互设计.md「权限与合规」章节。
+        设备共享存储（/sdcard）访问：
+        · API 30+ 需要用户在系统设置中主动开启「所有文件访问权限」，
+          开启后即可像系统文件管理器一样浏览/读写设备上的全部文件；
+          未开启时应用会明确引导，而不是默默退化成只看应用私有目录。
+        · API 25~29 用安装时授予的 READ_EXTERNAL_STORAGE（maxSdkVersion 限定），
+          不需要运行时弹窗。
+        · 依旧不申请 WRITE_EXTERNAL_STORAGE / 任何媒体库权限；
+          分享走 FileProvider 临时授权，SAF 授权目录作为「只授权某个文件夹」的兜底。
     -->
+    <uses-permission
+        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29" />
 
     <!-- ============ 局域网传输 ============ -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -28,8 +39,8 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!--
-        刻意不申请 READ_MEDIA_* / READ_EXTERNAL_STORAGE：
-        分享走 FileProvider 的临时授权，读文件走 SAF 授权，都不需要媒体库权限。
+        刻意不申请 READ_MEDIA_* / WRITE_EXTERNAL_STORAGE：
+        分享走 FileProvider 的临时授权，SAF 授权目录不需要媒体库权限。
     -->
 
     <!-- 通用适配：手表特性声明为可选，普通 Android 设备（手机/全安卓手表）同样可安装使用 -->

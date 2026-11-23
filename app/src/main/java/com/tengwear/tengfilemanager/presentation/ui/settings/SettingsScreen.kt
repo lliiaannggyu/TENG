@@ -50,9 +50,10 @@ import com.tengwear.tengfilemanager.presentation.ui.common.SeedSwatch
  *
  * 这里只放"必须让用户知道/能改"的东西：
  *  · 设备名（局域网里显示给别人看）；
- *  · 已授权目录（SAF 授权是本应用唯一的文件访问来源，必须可见、可撤销）；
+ *  · 设备存储访问状态（默认浏览位置，必须可见、可开启）；
+ *  · 已授权目录（SAF 是「只授权某个文件夹」的兜底来源，可见、可撤销）；
  *  · 交互偏好；
- *  · 权限与隐私说明（写清楚"不申请全盘权限""不上传任何文件"）。
+ *  · 权限与隐私说明（写清楚全盘权限由用户主动开启、不上传任何文件）。
  *
  * 开关用官方 M3E [SwitchButton]，主题色选择用 [RadioButton]——
  * 都自带按下形变、涟漪和无障碍语义。
@@ -62,6 +63,7 @@ fun SettingsScreen(vm: FileManagerViewModel) {
     val scheme = MaterialTheme.colorScheme
     val prefs by vm.prefsState.collectAsStateWithLifecycle()
     val roots by vm.roots.collectAsStateWithLifecycle()
+    val storageAccess by vm.storageAccess.collectAsStateWithLifecycle()
     val trashSummary by vm.trashSummary.collectAsStateWithLifecycle()
     val state = rememberScalingLazyListState()
     var nameInput by remember(prefs.deviceName) { mutableStateOf(prefs.deviceName) }
@@ -175,27 +177,49 @@ fun SettingsScreen(vm: FileManagerViewModel) {
                 }
             }
 
-            item(key = "rootsTitle") { SectionHeader("已授权目录") }
+            item(key = "storageTitle") { SectionHeader("设备存储访问") }
+            item(key = "storageState") {
+                MenuCard(
+                    icon = if (storageAccess) Icons.Filled.Home else Icons.Filled.Lock,
+                    title = if (storageAccess) "已开启 · 可浏览全部文件" else "未开启 · 只能看应用私有文件",
+                    subtitle = if (storageAccess) "可在系统设置中随时关闭" else "点按前往系统设置开启「所有文件访问权限」",
+                    accent = if (storageAccess) MaterialTheme.colorScheme.primary else scheme.error,
+                ) {
+                    if (storageAccess) vm.openDeviceStorage() else vm.requestAllFilesAccess()
+                }
+            }
+
+            item(key = "rootsTitle") { SectionHeader("可访问的位置") }
             items(roots.size, key = { "root_${roots[it].id}" }) { index ->
                 val location = roots[index]
-                MenuCard(
-                    icon = if (location.isSandbox) Icons.Filled.Home else Icons.Filled.Lock,
-                    title = location.name,
-                    subtitle = if (location.isSandbox) "应用沙盒（无需权限）" else "SAF 授权目录 · 点按移除",
-                    accent = if (location.isSandbox) MaterialTheme.colorScheme.primary else scheme.onSurfaceVariant,
-                ) {
-                    if (location.isSandbox) {
-                        vm.openLocationFromOverlay(location)
-                    } else {
-                        vm.removeLocation(location)
-                    }
+                when {
+                    location.isDeviceStorage -> MenuCard(
+                        icon = Icons.Filled.Home,
+                        title = "设备存储",
+                        subtitle = "全部文件 · 点按进入",
+                        accent = MaterialTheme.colorScheme.primary,
+                    ) { vm.openDeviceStorage() }
+
+                    location.isSandbox -> MenuCard(
+                        icon = Icons.Filled.Lock,
+                        title = location.name,
+                        subtitle = "应用私有文件（无需权限）",
+                        accent = scheme.onSurfaceVariant,
+                    ) { vm.openLocationFromOverlay(location) }
+
+                    else -> MenuCard(
+                        icon = Icons.Filled.Lock,
+                        title = location.name,
+                        subtitle = "SAF 授权目录 · 点按移除",
+                        accent = scheme.onSurfaceVariant,
+                    ) { vm.removeLocation(location) }
                 }
             }
             item(key = "addRoot") {
                 MenuCard(
                     icon = Icons.Filled.Add,
-                    title = "添加文件夹授权",
-                    subtitle = "系统文件选择器，仅授权所选目录",
+                    title = "只授权某个文件夹",
+                    subtitle = "不想开全盘权限时用，系统选择器仅授权所选目录",
                     accent = MaterialTheme.colorScheme.primary,
                 ) { treePicker.launch(null) }
             }
@@ -212,8 +236,8 @@ fun SettingsScreen(vm: FileManagerViewModel) {
             item(key = "aboutTitle") { SectionHeader("关于与隐私") }
             item(key = "privacy") {
                 Text(
-                    text = "· 不申请全盘存储权限\n" +
-                        "· 只读写应用沙盒与您主动授权的目录\n" +
+                    text = "· 设备存储需您主动开启「所有文件访问权限」，可随时关闭\n" +
+                        "· 不开启时只读写应用私有文件与您主动授权（SAF）的目录\n" +
                         "· 文件不经过任何服务器\n" +
                         "· 局域网传输仅在同一 Wi-Fi 内直连",
                     style = MaterialTheme.typography.labelSmall,

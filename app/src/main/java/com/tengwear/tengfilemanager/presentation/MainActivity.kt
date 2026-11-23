@@ -52,6 +52,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // 用户可能刚在系统设置里开启/关闭了「所有文件访问权限」，回来立即刷新根列表
+        viewModel.onStorageAccessMayChanged()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleViewIntent(intent)

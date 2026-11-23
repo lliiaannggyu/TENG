@@ -11,6 +11,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
@@ -50,7 +51,7 @@ fun HomeScreen(vm: FileManagerViewModel) {
     val kinds = LocalKindColors.current
     val scheme = MaterialTheme.colorScheme
     val volume by vm.volume.collectAsStateWithLifecycle()
-    val roots by vm.roots.collectAsStateWithLifecycle()
+    val storageAccess by vm.storageAccess.collectAsStateWithLifecycle()
     val trashItems by vm.trashItems.collectAsStateWithLifecycle()
     val state = rememberScalingLazyListState()
 
@@ -66,10 +67,22 @@ fun HomeScreen(vm: FileManagerViewModel) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
+            // 未获得设备存储访问权时，把「开启」放在首屏第一项——
+            // 以前这个入口埋在设置页里，用户打开只看到应用私有目录，等于没用。
+            if (!storageAccess) {
+                item(key = "grantStorage") {
+                    MenuCard(
+                        icon = Icons.Filled.Lock,
+                        title = "开启设备存储",
+                        subtitle = "不开启只能看应用私有文件",
+                        accent = scheme.error,
+                    ) { vm.requestAllFilesAccess() }
+                }
+            }
+
             item(key = "storage") {
                 Card(
-                    onClick = { vm.openLocation(roots.firstOrNull() ?: return@Card) },
-                    enabled = roots.isNotEmpty(),
+                    onClick = { vm.openDeviceStorage() },
                     contentPadding = ListRowPadding,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -111,9 +124,9 @@ fun HomeScreen(vm: FileManagerViewModel) {
                 MenuCard(
                     icon = Icons.AutoMirrored.Filled.List,
                     title = "浏览文件",
-                    subtitle = roots.firstOrNull()?.name ?: "应用内部存储",
+                    subtitle = if (storageAccess) "设备存储 · 全部文件" else "需开启设备存储访问",
                     accent = kinds.folder,
-                ) { roots.firstOrNull()?.let { vm.openLocation(it) } }
+                ) { vm.openDeviceStorage() }
             }
 
             item(key = "recent") {

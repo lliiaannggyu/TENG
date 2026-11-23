@@ -1,10 +1,15 @@
 package com.tengwear.tengfilemanager.core.fs
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
 import android.provider.DocumentsContract
 import android.webkit.MimeTypeMap
+import androidx.core.content.ContextCompat
 import com.tengwear.tengfilemanager.core.model.FileEntry
 import com.tengwear.tengfilemanager.core.model.FileKind
 import com.tengwear.tengfilemanager.core.model.Location
@@ -21,7 +26,8 @@ import java.io.OutputStream
  *    这里对 SAF 只用 **一次** child-documents cursor 查询拿全 size/mtime/mime。
  * 2. 所有 Location 的 uri 一律是 **document uri**（不是 tree uri），
  *    这样 createDocument / renameDocument / deleteDocument 可以直接复用。
- * 3. 沙盒路径走 java.io.File，速度是 SAF 的 5~10 倍；这也是"默认只操作沙盒"的性能理由。
+ * 3. java.io.File 路径（设备存储 + 应用私有文件）速度是 SAF 的 5~10 倍；
+ *    设备存储是默认浏览位置，SAF 只用于「不想开全盘权限、只授权某个目录」的兜底。
  */
 class StorageGateway(private val context: Context) {
 
@@ -44,12 +50,40 @@ class StorageGateway(private val context: Context) {
 
     // ---------------------------------------------------------------- 位置枚举
 
-    /** 沙盒目录：应用内部存储 + 应用外部私有目录。无需任何权限。 */
+    /** 沙盒目录：应用私有文件，无需任何权限。仅在用户明确想看私有文件时才应展示。 */
     fun sandboxLocations(): List<Location> = buildList {
-        add(Location(Uri.fromFile(context.filesDir), null, "应用内部存储", isSandbox = true))
+        add(Location(Uri.fromFile(context.filesDir), null, "应用私有文件", isSandbox = true))
         context.getExternalFilesDir(null)?.let {
-            add(Location(Uri.fromFile(it), null, "应用外部存储", isSandbox = true))
+            add(Location(Uri.fromFile(it), null, "应用外部私有文件", isSandbox = true))
         }
+    }
+
+    /**
+     * 是否已获得设备共享存储的完整访问权。
+     * · API 30+：需要用户在系统设置中开启「所有文件访问权限」(MANAGE_EXTERNAL_STORAGE)；
+     *   分区存储下没有该权限时 File.listFiles() 会拿到空列表，必须显式判断。
+     * · API 25~29：READ_EXTERNAL_STORAGE 在安装时授予（清单 maxSdkVersion=29），直接可读。
+     */
+    fun hasAllFilesAccess(): Boolean =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Environment.isExternalStorageManager()
+        } else {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) ==
+                PackageManager.PERMISSION_GRANTED
+        }
+
+    /** 设备共享存储根（/sdcard）。未获授权时返回 null，由 UI 引导用户开启。 */
+    fun deviceStorageRoot(): Location? {
+        if (!hasAllFilesAccess()) return null
+        val dir = Environment.getExternalStorageDirectory()
+        if (!dir.isDirectory) return null
+        // isSandbox=true 只是表示走 java.io.File 路径（scheme=file 也能走到），
+        // isDeviceStorage 才是给 UI 看的语义标记，避免被误标成「应用沙盒」。
+        return Location(
+            Uri.fromFile(dir), null, "设备存储",
+            isSandbox = true,
+            isDeviceStorage = true,
+        )
     }
 
     /** 用户通过 SAF 长期授权的目录（persisted permission）。 */
@@ -67,9 +101,20 @@ class StorageGateway(private val context: Context) {
             }
             .distinctBy { it.uri }
 
-    fun allRoots(): List<Location> = sandboxLocations() + authorizedLocations()
+    /**
+     * 根列表顺序 = 用户心智顺序：设备存储永远排第一，应用私有文件垫底。
+     * 首页「浏览文件」直接开第一个根，所以授权后打开就是设备存储，
+     * 而不是以前那个「看自己空目录」的沙盒。
+     */
+    fun allRoots(): List<Location> = buildList {
+        deviceStorageRoot()?.let { add(it) }
+        addAll(authorizedLocations())
+        addAll(sandboxLocations())
+    }
 
-    fun defaultRoot(): Location = sandboxLocations().first()
+    /** 默认根：设备存储 > 用户授权目录 > 应用私有文件（最后兜底）。 */
+    fun defaultRoot(): Location =
+        allRoots().firstOrNull { it.isDeviceStorage || !it.isSandbox } ?: sandboxLocations().first()
 
     /** 从系统文件选择器带回的 tree uri 生成 Location，并持久化授权。 */
     fun locationFromTreeUri(treeUri: Uri): Location? = runCatching {
@@ -171,7 +216,11 @@ class StorageGateway(private val context: Context) {
     fun parentLocation(location: Location): Location? {
         if (location.isSandbox || location.uri.scheme == "file") {
             val parent = File(location.uri.path ?: return null).parentFile ?: return null
-            return Location(Uri.fromFile(parent), null, parent.name, isSandbox = true)
+            return Location(
+                Uri.fromFile(parent), null, parent.name.ifEmpty { "存储根" },
+                isSandbox = true,
+                isDeviceStorage = location.isDeviceStorage,
+            )
         }
         val tree = location.treeUri ?: return null
         val docId = DocumentsContract.getDocumentId(location.uri)
@@ -351,10 +400,18 @@ class StorageGateway(private val context: Context) {
         if (!target.canRead()) {
             return PathResult.NeedsGrant(
                 target.absolutePath,
-                "系统目录需要授权后才能访问（本应用不申请全盘存储权限）",
+                "请在系统设置中为 TENG 开启「所有文件访问权限」，或改用 SAF 授权该目录",
             )
         }
-        return PathResult.Ok(Location(Uri.fromFile(target), null, target.name.ifEmpty { "存储根" }, isSandbox = true))
+        return PathResult.Ok(
+            Location(
+                Uri.fromFile(target), null,
+                target.name.ifEmpty { "存储根" },
+                isSandbox = true,
+                isDeviceStorage = hasAllFilesAccess() && target.absolutePath ==
+                    Environment.getExternalStorageDirectory().absolutePath,
+            )
+        )
     }
 
     private fun readableError(t: Throwable): String = when (t) {

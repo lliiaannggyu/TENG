@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -158,6 +159,10 @@ class FileManagerViewModel(app: Application) : AndroidViewModel(app) {
     private val _roots = MutableStateFlow<List<Location>>(emptyList())
     val roots: StateFlow<List<Location>> = _roots.asStateFlow()
 
+    /** 是否已获得设备共享存储的完整访问权；首页据此显示「开启设备存储」引导。 */
+    private val _storageAccess = MutableStateFlow(false)
+    val storageAccess: StateFlow<Boolean> = _storageAccess.asStateFlow()
+
     private val _volume = MutableStateFlow(0L to 0L)
     val volume: StateFlow<Pair<Long, Long>> = _volume.asStateFlow()
 
@@ -206,6 +211,7 @@ class FileManagerViewModel(app: Application) : AndroidViewModel(app) {
             val name = prefs.flow.first().deviceName
             lan.setIdentity(id, name)
             withContext(Dispatchers.IO) {
+                _storageAccess.value = fs.hasAllFilesAccess()
                 _roots.value = repo.roots()
                 _volume.value = repo.volumeUsage()
             }
@@ -216,9 +222,51 @@ class FileManagerViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---------------------------------------------------------------- 设备存储访问
+
+    /** 首页「浏览文件」直达设备存储；未授权则先引导开启。 */
+    fun openDeviceStorage() {
+        val root = fs.deviceStorageRoot()
+        if (root != null) openLocation(root) else requestAllFilesAccess()
+    }
+
+    /**
+     * 调起系统的「所有文件访问权限」设置页。
+     * API 25~29 由安装时授予的 READ_EXTERNAL_STORAGE 覆盖，无需引导。
+     */
+    fun requestAllFilesAccess() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
+        val app = getApplication<Application>()
+        val intent = Intent(
+            android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+            Uri.parse("package:${app.packageName}"),
+        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val fallback = Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val opened = runCatching {
+            app.startActivity(intent)
+            true
+        }.getOrElse {
+            runCatching { app.startActivity(fallback); true }.getOrDefault(false)
+        }
+        if (!opened) _message.value = "请在系统设置中手动开启「所有文件访问权限」"
+    }
+
+    /** 从系统设置返回时刷新：权限可能刚被开启或关闭。 */
+    fun onStorageAccessMayChanged() {
+        val granted = fs.hasAllFilesAccess()
+        val wasGranted = _storageAccess.value
+        _storageAccess.value = granted
+        refreshRoots()
+        if (!wasGranted && granted) {
+            _message.value = "已开启设备存储访问，点「浏览文件」即可查看全部文件"
+        }
+    }
+
     fun refreshRoots() {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
+                _storageAccess.value = fs.hasAllFilesAccess()
                 _roots.value = repo.roots()
                 _volume.value = repo.volumeUsage()
             }
